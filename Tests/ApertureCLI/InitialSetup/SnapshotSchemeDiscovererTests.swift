@@ -42,4 +42,31 @@ struct SnapshotSchemeDiscovererTests {
 
         #expect(schemes == ["PackageSnapshots", "Shared", "Snapshots"])
     }
+
+    @Test
+    func discoversPackageSchemesFromAbsolutePackagesPath() throws {
+        let absolutePackagesURL = URL(fileURLWithPath: "/tmp/Packages", isDirectory: true)
+        let fileSystem = MockFileSystem(
+            existingPaths: [absolutePackagesURL.path],
+            recursiveDirectoryContentsByPath: [
+                absolutePackagesURL.path: [
+                    URL(
+                        fileURLWithPath: "/tmp/Packages/Foo/.swiftpm/xcode/xcshareddata/xcschemes/" +
+                            "AbsoluteSnapshots.xcscheme"
+                    )
+                ]
+            ]
+        )
+        let discoverer = SnapshotSchemeDiscoverer(fileSystem: fileSystem)
+
+        let schemes = try discoverer.discoverSnapshotTestSchemes(
+            repoRoot: "/repo",
+            projectFileName: "MyApp.xcodeproj",
+            spmPackagesContainerPath: "/tmp/Packages"
+        )
+
+        #expect(schemes == ["AbsoluteSnapshots"])
+        #expect(fileSystem.fileExistsCalls.contains(absolutePackagesURL.path))
+        #expect(fileSystem.fileExistsCalls.contains("/repo/tmp/Packages") == false)
+    }
 }
