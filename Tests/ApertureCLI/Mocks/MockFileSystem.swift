@@ -8,6 +8,7 @@ final class MockFileSystem: FileSystemProvider {
     }
 
     let currentDirectoryPathValue: String
+    let fileExistsResults: [String: Bool]
     let existingPaths: Set<String>
     let directoryContentsByPath: [String: [URL]]
     let recursiveDirectoryContentsByPath: [String: [URL]]
@@ -19,6 +20,7 @@ final class MockFileSystem: FileSystemProvider {
 
     init(
         currentDirectoryPath: String = "/repo",
+        fileExistsResults: [String: Bool] = [:],
         existingPaths: Set<String> = [],
         directoryContentsByPath: [String: [URL]] = [:],
         recursiveDirectoryContentsByPath: [String: [URL]] = [:],
@@ -26,6 +28,7 @@ final class MockFileSystem: FileSystemProvider {
         libraryDirectoryURL: URL = URL(fileURLWithPath: "/tmp", isDirectory: true)
     ) {
         self.currentDirectoryPathValue = currentDirectoryPath
+        self.fileExistsResults = fileExistsResults
         self.existingPaths = existingPaths
         self.directoryContentsByPath = directoryContentsByPath
         self.recursiveDirectoryContentsByPath = recursiveDirectoryContentsByPath
@@ -33,8 +36,34 @@ final class MockFileSystem: FileSystemProvider {
         self.libraryDirectoryURL = libraryDirectoryURL
     }
 
+    convenience init(
+        currentDirectoryPath: String = "/repo",
+        fileExistsResults: [String: Bool] = [:],
+        libraryDirectoryURL: URL = URL(fileURLWithPath: "/tmp", isDirectory: true),
+        contentsOfDirectoryResults: [URL: [URL]] = [:],
+        recursiveContentsOfDirectoryResults: [URL: [URL]] = [:],
+        fileContentsByPath: [String: String] = [:]
+    ) {
+        self.init(
+            currentDirectoryPath: currentDirectoryPath,
+            fileExistsResults: fileExistsResults,
+            existingPaths: Set(fileExistsResults.compactMap { key, value in value ? key : nil }),
+            directoryContentsByPath: Dictionary(
+                uniqueKeysWithValues: contentsOfDirectoryResults.map { ($0.key.path, $0.value) }
+            ),
+            recursiveDirectoryContentsByPath: Dictionary(
+                uniqueKeysWithValues: recursiveContentsOfDirectoryResults.map { ($0.key.path, $0.value) }
+            ),
+            fileContentsByPath: fileContentsByPath,
+            libraryDirectoryURL: libraryDirectoryURL
+        )
+    }
+
     func fileExists(atPath path: String) -> Bool {
         fileExistsCalls.append(path)
+        if let result = fileExistsResults[path] {
+            return result
+        }
         return existingPaths.contains(path)
     }
 

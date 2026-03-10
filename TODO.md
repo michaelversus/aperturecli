@@ -1,17 +1,22 @@
 # Aperture CLI Board
 
 ## Backlog
-- introduce derivedDataLocator
-- introduce xcresultkit dependency
-- try to edit the schemes and add the required post action scripts using the init command
+- introduce lessons.md
+- parse xcresult files
+- create .aperture directory to store data parsed
 
 # Current Sprint
 
 ## TODO
-- init command request from user schemes to add post action scripts
+- introduce xcresultkit dependency
+- introduce derivedDataLocator
 
 ## In Progress
 
 
 ## Done
 - init command under the user pwd wire things up
+- init command request from user schemes to add post action scripts
+- introduce sync schemes command
+- use sync schemes command to add test post actions scripts that echo
+- add lots of tests for every file
