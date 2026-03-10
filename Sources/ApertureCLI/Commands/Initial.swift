@@ -13,10 +13,17 @@ extension ApertureCLI {
             let output: (String) -> Void = { message in
                 Swift.print(message)
             }
+            let schemeDiscoverer = SnapshotSchemeDiscoverer(fileSystem: fileSystem)
+            let schemeUpdater = SchemePostActionUpdater(fileSystem: fileSystem)
+            let schemeSynchronizer = SchemePostActionSynchronizer(
+                schemeDiscoverer: schemeDiscoverer,
+                schemeUpdater: schemeUpdater
+            )
             let compositionRoot = InitialCompositionRoot(
                 fileSystem: fileSystem,
                 prompter: TerminalSetupPrompter(output: output),
-                schemeDiscoverer: SnapshotSchemeDiscoverer(fileSystem: fileSystem),
+                schemeDiscoverer: schemeDiscoverer,
+                schemePostActionSynchronizer: schemeSynchronizer,
                 configWriter: ApertureConfigWriter(fileSystem: fileSystem)
             )
             try await compositionRoot.run()

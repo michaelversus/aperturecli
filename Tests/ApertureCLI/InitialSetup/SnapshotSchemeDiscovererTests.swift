@@ -4,6 +4,44 @@ import Testing
 
 struct SnapshotSchemeDiscovererTests {
     @Test
+    func locatesProjectAndPackageSchemeReferences() throws {
+        let projectSchemesURL = URL(fileURLWithPath: "/repo/MyApp.xcodeproj/xcshareddata/xcschemes", isDirectory: true)
+        let packagesURL = URL(fileURLWithPath: "/repo/Packages", isDirectory: true)
+        let fileSystem = MockFileSystem(
+            existingPaths: [
+                projectSchemesURL.path,
+                packagesURL.path
+            ],
+            directoryContentsByPath: [
+                projectSchemesURL.path: [
+                    projectSchemesURL.appendingPathComponent("Snapshots.xcscheme")
+                ]
+            ],
+            recursiveDirectoryContentsByPath: [
+                packagesURL.path: [
+                    URL(
+                        fileURLWithPath: "/repo/Packages/Foo/.swiftpm/xcode/xcshareddata/xcschemes/" +
+                            "PackageSnapshots.xcscheme"
+                    )
+                ]
+            ]
+        )
+        let discoverer = SnapshotSchemeDiscoverer(fileSystem: fileSystem)
+
+        let references = try discoverer.locateSnapshotTestSchemes(
+            repoRoot: "/repo",
+            projectFileName: "MyApp.xcodeproj",
+            spmPackagesContainerPath: "Packages"
+        )
+
+        #expect(references.count == 2)
+        #expect(references[0].name == "Snapshots")
+        #expect(references[0].source == .project)
+        #expect(references[1].name == "PackageSnapshots")
+        #expect(references[1].source == .spm)
+    }
+
+    @Test
     func discoversProjectAndPackageSchemesAndReturnsUniqueSortedNames() throws {
         let projectSchemesURL = URL(fileURLWithPath: "/repo/MyApp.xcodeproj/xcshareddata/xcschemes", isDirectory: true)
         let packagesURL = URL(fileURLWithPath: "/repo/Packages", isDirectory: true)

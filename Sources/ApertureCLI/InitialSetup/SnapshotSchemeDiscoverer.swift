@@ -1,6 +1,12 @@
 import Foundation
 
 protocol SnapshotSchemeDiscovering {
+    func locateSnapshotTestSchemes(
+        repoRoot: String,
+        projectFileName: String,
+        spmPackagesContainerPath: String
+    ) throws -> [SchemeReference]
+
     func discoverSnapshotTestSchemes(
         repoRoot: String,
         projectFileName: String,
@@ -11,17 +17,17 @@ protocol SnapshotSchemeDiscovering {
 struct SnapshotSchemeDiscoverer: SnapshotSchemeDiscovering {
     let fileSystem: FileSystemProvider
 
-    func discoverSnapshotTestSchemes(
+    func locateSnapshotTestSchemes(
         repoRoot: String,
         projectFileName: String,
         spmPackagesContainerPath: String
-    ) throws -> [String] {
+    ) throws -> [SchemeReference] {
         let repoRootURL = URL(fileURLWithPath: repoRoot, isDirectory: true)
         let projectSchemesDirectory = repoRootURL
             .appendingPathComponent(projectFileName, isDirectory: true)
             .appendingPathComponent("xcshareddata/xcschemes", isDirectory: true)
 
-        var schemeNames: [String] = []
+        var references: [SchemeReference] = []
 
         if fileSystem.fileExists(atPath: projectSchemesDirectory.path) {
             let projectSchemeFiles = try fileSystem.contentsOfDirectory(
@@ -29,7 +35,7 @@ struct SnapshotSchemeDiscoverer: SnapshotSchemeDiscovering {
                 includingPropertiesForKeys: nil,
                 options: []
             )
-            schemeNames.append(contentsOf: contentsOfXCSchemes(from: projectSchemeFiles))
+            references.append(contentsOf: schemeReferences(from: projectSchemeFiles, source: .project))
         }
 
         let spmPackagesContainerURL = resolvePath(spmPackagesContainerPath, relativeTo: repoRootURL)
@@ -43,16 +49,35 @@ struct SnapshotSchemeDiscoverer: SnapshotSchemeDiscovering {
                 let normalizedPath = itemURL.standardizedFileURL.path
                 return normalizedPath.contains("/.swiftpm/xcode/xcshareddata/xcschemes/")
             }
-            schemeNames.append(contentsOf: contentsOfXCSchemes(from: packageSchemeFiles))
+            references.append(contentsOf: schemeReferences(from: packageSchemeFiles, source: .spm))
         }
 
-        return uniquePreservingOrder(schemeNames).sorted()
+        return references
     }
 
-    private func contentsOfXCSchemes(from urls: [URL]) -> [String] {
+    func discoverSnapshotTestSchemes(
+        repoRoot: String,
+        projectFileName: String,
+        spmPackagesContainerPath: String
+    ) throws -> [String] {
+        let references = try locateSnapshotTestSchemes(
+            repoRoot: repoRoot,
+            projectFileName: projectFileName,
+            spmPackagesContainerPath: spmPackagesContainerPath
+        )
+        return uniquePreservingOrder(references.map(\.name)).sorted()
+    }
+
+    private func schemeReferences(from urls: [URL], source: SchemeSource) -> [SchemeReference] {
         urls
             .filter { $0.pathExtension == "xcscheme" }
-            .map { $0.deletingPathExtension().lastPathComponent }
+            .map {
+                SchemeReference(
+                    name: $0.deletingPathExtension().lastPathComponent,
+                    path: $0.path,
+                    source: source
+                )
+            }
     }
 
     private func resolvePath(_ path: String, relativeTo rootURL: URL) -> URL {

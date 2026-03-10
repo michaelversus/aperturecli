@@ -4,6 +4,7 @@ struct InitialCompositionRoot {
     let fileSystem: FileSystemProvider
     let prompter: InitialSetupPrompting
     let schemeDiscoverer: SnapshotSchemeDiscovering
+    let schemePostActionSynchronizer: SchemePostActionSynchronizing
     let configWriter: ApertureConfigWriting
 
     func run() async throws {
@@ -11,6 +12,7 @@ struct InitialCompositionRoot {
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: schemeDiscoverer,
+            schemePostActionSynchronizer: schemePostActionSynchronizer,
             configWriter: configWriter
         )
 

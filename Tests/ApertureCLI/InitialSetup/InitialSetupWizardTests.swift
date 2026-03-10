@@ -8,11 +8,13 @@ struct InitialSetupWizardTests {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let prompter = MockPrompter(confirmations: [false])
         let discoverer = MockSnapshotSchemeDiscoverer()
+        let synchronizer = MockSchemePostActionSynchronizer()
         let configWriter = MockConfigWriter(configExists: true)
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
             configWriter: configWriter
         )
 
@@ -22,6 +24,7 @@ struct InitialSetupWizardTests {
         } catch {
             #expect(configWriter.writeCallCount == 0)
             #expect(discoverer.callCount == 0)
+            #expect(synchronizer.callCount == 0)
             #expect(prompter.promptedValues.isEmpty)
             #expect(prompter.messages.contains("Keeping existing configuration. Setup cancelled."))
         }
@@ -48,11 +51,19 @@ struct InitialSetupWizardTests {
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer(
+            result: SchemePostActionSyncResult(
+                matchedSchemeNames: ["Snapshots"],
+                updatedSchemeFilePaths: ["/repo/MyApp.xcodeproj/xcshareddata/xcschemes/Snapshots.xcscheme"],
+                missingSelectedSchemeNames: []
+            )
+        )
         let configWriter = MockConfigWriter(configExists: true)
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
             configWriter: configWriter
         )
 
@@ -61,6 +72,7 @@ struct InitialSetupWizardTests {
         #expect(prompter.messages.contains("Replacing existing configuration."))
         #expect(prompter.messages.contains("Saved configuration to /repo/.aperture.json"))
         #expect(discoverer.callCount == 1)
+        #expect(synchronizer.callCount == 1)
         #expect(configWriter.writeCallCount == 1)
     }
 
@@ -86,11 +98,19 @@ struct InitialSetupWizardTests {
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer(
+            result: SchemePostActionSyncResult(
+                matchedSchemeNames: ["Snapshots"],
+                updatedSchemeFilePaths: ["/repo/MyApp.xcodeproj/xcshareddata/xcschemes/Snapshots.xcscheme"],
+                missingSelectedSchemeNames: []
+            )
+        )
         let configWriter = MockConfigWriter(configExists: false)
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
             configWriter: configWriter
         )
 
@@ -106,8 +126,13 @@ struct InitialSetupWizardTests {
         #expect(writtenConfig.snapshotTestSchemes == ["Snapshots"])
         #expect(discoverer.receivedProjectFileName == "MyApp.xcodeproj")
         #expect(discoverer.receivedSPMPackagesPath == "Packages")
+        #expect(synchronizer.receivedProjectFileName == "MyApp.xcodeproj")
+        #expect(synchronizer.receivedSPMPackagesPath == "Packages")
+        #expect(synchronizer.receivedSelectedSchemeNames == ["Snapshots"])
         #expect(prompter.messages.contains("Project file does not exist: MissingProject.xcodeproj. Please try again."))
         #expect(prompter.messages.contains("Path does not exist: MissingPackages. Please try again."))
+        #expect(prompter.messages.contains("Matched schemes: 1"))
+        #expect(prompter.messages.contains("Updated scheme files: 1"))
         #expect(prompter.messages.contains("Saved configuration to /repo/.aperture.json"))
     }
 
@@ -131,11 +156,13 @@ struct InitialSetupWizardTests {
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer()
         let configWriter = MockConfigWriter(configExists: false)
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
             configWriter: configWriter
         )
 
@@ -168,11 +195,13 @@ struct InitialSetupWizardTests {
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer()
         let configWriter = MockConfigWriter(configExists: false)
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
             configWriter: configWriter
         )
 
@@ -187,5 +216,46 @@ struct InitialSetupWizardTests {
         #expect(fileSystem.fileExistsCalls.contains(packagesPath))
         #expect(!fileSystem.fileExistsCalls.contains("/repo\(projectPath)"))
         #expect(!fileSystem.fileExistsCalls.contains("/repo\(packagesPath)"))
+    }
+
+    @Test
+    func doesNotWriteConfigWhenSchemeSyncFails() async throws {
+        struct SyncFailure: Error {}
+
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo",
+            existingPaths: [
+                "/repo/MyApp.xcodeproj",
+                "/repo/Packages"
+            ]
+        )
+        let prompter = MockPrompter(
+            requiredValues: [
+                "18.2",
+                "iPhone 16 Pro",
+                "16.2",
+                "MyApp",
+                "Packages"
+            ],
+            selectedSchemes: ["Snapshots"]
+        )
+        let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer(error: SyncFailure())
+        let configWriter = MockConfigWriter(configExists: false)
+        let wizard = InitialSetupWizard(
+            fileSystem: fileSystem,
+            prompter: prompter,
+            schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
+            configWriter: configWriter
+        )
+
+        do {
+            try await wizard.run()
+            Issue.record("Expected sync failure.")
+        } catch is SyncFailure {
+            #expect(synchronizer.callCount == 1)
+            #expect(configWriter.writeCallCount == 0)
+        }
     }
 }

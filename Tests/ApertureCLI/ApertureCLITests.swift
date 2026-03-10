@@ -12,6 +12,11 @@ struct ApertureCLITests {
             }
         )
         #expect(
+            ApertureCLI.configuration.subcommands.contains {
+                String(describing: $0) == String(describing: ApertureCLI.Schemes.self)
+            }
+        )
+        #expect(
             String(describing: ApertureCLI.configuration.defaultSubcommand)
                 == String(describing: Optional(ApertureCLI.Initial.self))
         )

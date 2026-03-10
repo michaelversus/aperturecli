@@ -5,6 +5,7 @@ struct InitialSetupWizard {
     let fileSystem: FileSystemProvider
     let prompter: InitialSetupPrompting
     let schemeDiscoverer: SnapshotSchemeDiscovering
+    let schemePostActionSynchronizer: SchemePostActionSynchronizing
     let configWriter: ApertureConfigWriting
 
     func run() async throws {
@@ -44,6 +45,18 @@ struct InitialSetupWizard {
             }
         )
         let snapshotTestSchemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
+        let syncResult = try await prompter.performWithSpinner(
+            prefix: "Synchronizing scheme post-actions",
+            operation: {
+                try schemePostActionSynchronizer.syncPostActions(
+                    repoRoot: repoRoot,
+                    projectFileName: projectFileName,
+                    spmPackagesContainerPath: spmPackagesContainerPath,
+                    selectedSchemeNames: snapshotTestSchemes
+                )
+            }
+        )
+        SchemePostActionSyncReporting.lines(for: syncResult).forEach(prompter.writeMessage)
 
         let config = ApertureConfig(
             repoRoot: repoRoot,
