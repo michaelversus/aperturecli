@@ -71,7 +71,8 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         if discoveredSchemes.isEmpty {
             output("No .xcscheme files were discovered automatically.")
             let manualSchemes = try promptRequiredListValue(
-                "Provide snapshot test schemes manually (comma-separated, for example: MyAppSnapshots,MyFeatureSnapshots)"
+                "Provide snapshot test schemes manually (comma-separated, " +
+                    "for example: MyAppSnapshots,MyFeatureSnapshots)"
             )
             output("Selected schemes: \(manualSchemes.map(green).joined(separator: ", "))")
             return manualSchemes
@@ -84,6 +85,10 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
             return selectedSchemes
         }
 
+        return try promptSnapshotTestSchemesFromDiscoveredList(discoveredSchemes)
+    }
+
+    private func promptSnapshotTestSchemesFromDiscoveredList(_ discoveredSchemes: [String]) throws -> [String] {
         output("Discovered schemes:")
         for (index, scheme) in discoveredSchemes.enumerated() {
             output("\(index + 1). \(scheme)")
@@ -114,7 +119,9 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
                     continue
                 }
 
-                if let nameMatch = discoveredSchemes.first(where: { $0.caseInsensitiveCompare(token) == .orderedSame }) {
+                if let nameMatch = discoveredSchemes.first(
+                    where: { $0.caseInsensitiveCompare(token) == .orderedSame }
+                ) {
                     selected.append(nameMatch)
                     continue
                 }
@@ -232,215 +239,4 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         guard supportsInteractiveTerminal() else { return value }
         return "\u{001B}[32m\(value)\u{001B}[0m"
     }
-}
-
-private struct CursorMultiSelect {
-    let options: [String]
-
-    func run() throws -> [String] {
-        let rawMode = try TerminalRawMode()
-        try rawMode.enable()
-        defer {
-            rawMode.disable()
-            writeToStdout("\u{1B}[?25h")
-            writeToStdout("\n")
-        }
-
-        writeToStdout("\u{1B}[?25l")
-
-        var cursor = 0
-        let viewportSize = max(5, terminalRows() - 8)
-        var topIndex = 0
-        var selected = Set<Int>()
-        var linesRendered = 0
-
-        while true {
-            linesRendered = render(
-                cursor: cursor,
-                topIndex: topIndex,
-                viewportSize: viewportSize,
-                selected: selected,
-                previousLines: linesRendered
-            )
-
-            switch readKey() {
-            case .up:
-                cursor = (cursor - 1 + options.count) % options.count
-                topIndex = updatedTopIndex(cursor: cursor, topIndex: topIndex, viewportSize: viewportSize)
-            case .down:
-                cursor = (cursor + 1) % options.count
-                topIndex = updatedTopIndex(cursor: cursor, topIndex: topIndex, viewportSize: viewportSize)
-            case .space:
-                if selected.contains(cursor) {
-                    selected.remove(cursor)
-                } else {
-                    selected.insert(cursor)
-                }
-            case .enter:
-                if selected.isEmpty {
-                    return [options[cursor]]
-                }
-                return selected.sorted().map { options[$0] }
-            case .unknown:
-                continue
-            }
-        }
-    }
-
-    private func render(
-        cursor: Int,
-        topIndex: Int,
-        viewportSize: Int,
-        selected: Set<Int>,
-        previousLines: Int
-    ) -> Int {
-        var frame = ""
-        if previousLines > 0 {
-            for _ in 0..<previousLines {
-                frame += "\u{1B}[1A\r\u{1B}[2K"
-            }
-        }
-
-        let endIndex = min(options.count, topIndex + viewportSize)
-        let visibleOptions = Array(options[topIndex..<endIndex])
-        let startDisplayIndex = min(topIndex + 1, options.count)
-        let endDisplayIndex = min(endIndex, options.count)
-
-        frame += "Select snapshot schemes (\(selected.count) selected):\n"
-        for (offset, option) in visibleOptions.enumerated() {
-            let index = topIndex + offset
-            let pointer = index == cursor ? ">" : " "
-            let marker = selected.contains(index) ? "(x)" : "( )"
-            frame += "\(pointer) \(marker) \(option)\n"
-        }
-
-        if visibleOptions.count < viewportSize {
-            for _ in 0..<(viewportSize - visibleOptions.count) {
-                frame += "\n"
-            }
-        }
-
-        frame += "Showing \(startDisplayIndex)-\(endDisplayIndex) of \(options.count)\n"
-        frame += "Up/Down: move, Space: toggle, Enter: confirm\n"
-
-        writeToStdout(frame)
-        return viewportSize + 3
-    }
-
-    private func updatedTopIndex(cursor: Int, topIndex: Int, viewportSize: Int) -> Int {
-        if cursor < topIndex {
-            return cursor
-        }
-        if cursor >= topIndex + viewportSize {
-            return cursor - viewportSize + 1
-        }
-        return topIndex
-    }
-
-    private func readKey() -> Key {
-        var byte: UInt8 = 0
-        guard read(STDIN_FILENO, &byte, 1) == 1 else {
-            return .unknown
-        }
-
-        if byte == 0x1B {
-            var sequence = [UInt8](repeating: 0, count: 2)
-            guard read(STDIN_FILENO, &sequence[0], 1) == 1, read(STDIN_FILENO, &sequence[1], 1) == 1 else {
-                return .unknown
-            }
-            if sequence[0] == 0x5B && sequence[1] == 0x41 {
-                return .up
-            }
-            if sequence[0] == 0x5B && sequence[1] == 0x42 {
-                return .down
-            }
-            return .unknown
-        }
-
-        if byte == 0x20 {
-            return .space
-        }
-
-        if byte == 0x0A || byte == 0x0D {
-            return .enter
-        }
-
-        return .unknown
-    }
-
-    private func writeToStdout(_ text: String) {
-        guard let data = text.data(using: .utf8) else { return }
-        FileHandle.standardOutput.write(data)
-    }
-
-    private func terminalRows() -> Int {
-        var windowSize = winsize()
-        if ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0, windowSize.ws_row > 0 {
-            return Int(windowSize.ws_row)
-        }
-        return 24
-    }
-
-    private enum Key {
-        case up
-        case down
-        case space
-        case enter
-        case unknown
-    }
-}
-
-private struct TerminalRawMode {
-    private let original: termios
-
-    init() throws {
-        var term = termios()
-        guard tcgetattr(STDIN_FILENO, &term) == 0 else {
-            throw CleanExit.message("Unable to read terminal attributes.")
-        }
-        self.original = term
-    }
-
-    func enable() throws {
-        var raw = original
-        raw.c_lflag &= ~tcflag_t(ECHO | ICANON)
-        raw.c_iflag &= ~tcflag_t(ICRNL | IXON)
-
-        guard tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == 0 else {
-            throw CleanExit.message("Unable to configure terminal for interactive selection.")
-        }
-
-        TerminalRawModeState.original = original
-        TerminalRawModeState.active = 1
-        installTerminalRestoreSignalHandlers()
-    }
-
-    func disable() {
-        restoreTerminalIfNeeded()
-    }
-}
-
-private enum TerminalRawModeState {
-    nonisolated(unsafe) static var original = termios()
-    nonisolated(unsafe) static var active: Darwin.sig_atomic_t = 0
-}
-
-private func restoreTerminalIfNeeded() {
-    guard TerminalRawModeState.active == 1 else { return }
-    var original = TerminalRawModeState.original
-    _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &original)
-    TerminalRawModeState.active = 0
-}
-
-private func terminalRestoreSignalHandler(_ signal: Int32) {
-    restoreTerminalIfNeeded()
-    _ = Darwin.signal(signal, SIG_DFL)
-    Darwin.raise(signal)
-}
-
-private func installTerminalRestoreSignalHandlers() {
-    _ = Darwin.signal(SIGINT, terminalRestoreSignalHandler)
-    _ = Darwin.signal(SIGTERM, terminalRestoreSignalHandler)
-    _ = Darwin.signal(SIGHUP, terminalRestoreSignalHandler)
-    _ = Darwin.signal(SIGQUIT, terminalRestoreSignalHandler)
 }

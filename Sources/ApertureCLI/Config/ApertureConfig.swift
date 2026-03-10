@@ -44,7 +44,10 @@ struct ApertureConfig: Codable, Sendable {
         simulatorModel = try container.decode(String.self, forKey: .simulatorModel)
         xcodeVersion = try container.decode(String.self, forKey: .xcodeVersion)
         projectFileName = try container.decode(String.self, forKey: .projectFileName)
-        spmPackagesContainerPath = try container.decodeIfPresent(String.self, forKey: .spmPackagesContainerPath) ?? "Packages"
+        spmPackagesContainerPath = try container.decodeIfPresent(
+            String.self,
+            forKey: .spmPackagesContainerPath
+        ) ?? "Packages"
         snapshotTestSchemes = try container.decodeIfPresent([String].self, forKey: .snapshotTestSchemes) ?? []
     }
 }

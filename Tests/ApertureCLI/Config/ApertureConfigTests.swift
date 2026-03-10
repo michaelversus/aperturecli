@@ -5,7 +5,7 @@ import Testing
 struct ApertureConfigTests {
     @Test
     func decodingUsesDefaultsForOptionalFields() throws {
-        let data = """
+        let data = Data("""
         {
           "repoRoot": "/repo",
           "iosVersion": "18.2",
@@ -13,7 +13,7 @@ struct ApertureConfigTests {
           "xcodeVersion": "16.2",
           "projectFileName": "MyApp.xcodeproj"
         }
-        """.data(using: .utf8)!
+        """.utf8)
 
         let config = try JSONDecoder().decode(ApertureConfig.self, from: data)
 

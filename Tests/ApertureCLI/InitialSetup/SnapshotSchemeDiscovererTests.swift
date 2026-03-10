@@ -21,8 +21,14 @@ struct SnapshotSchemeDiscovererTests {
             ],
             recursiveDirectoryContentsByPath: [
                 packagesURL.path: [
-                    URL(fileURLWithPath: "/repo/Packages/Foo/.swiftpm/xcode/xcshareddata/xcschemes/Shared.xcscheme"),
-                    URL(fileURLWithPath: "/repo/Packages/Bar/.swiftpm/xcode/xcshareddata/xcschemes/PackageSnapshots.xcscheme")
+                    URL(
+                        fileURLWithPath: "/repo/Packages/Foo/.swiftpm/xcode/xcshareddata/xcschemes/" +
+                            "Shared.xcscheme"
+                    ),
+                    URL(
+                        fileURLWithPath: "/repo/Packages/Bar/.swiftpm/xcode/xcshareddata/xcschemes/" +
+                            "PackageSnapshots.xcscheme"
+                    )
                 ]
             ]
         )

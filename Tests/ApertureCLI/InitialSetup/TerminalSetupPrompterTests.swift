@@ -116,6 +116,32 @@ struct TerminalSetupPrompterTests {
     }
 
     @Test
+    func promptSnapshotTestSchemesRetriesManualEntryWhenParsedSelectionIsEmpty() async throws {
+        var messages: [String] = []
+        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+
+        let stdout = try await withRedirectedStandardStreams(stdin: " , \nSnapshots\n") {
+            let schemes = try prompter.promptSnapshotTestSchemes(from: [])
+            #expect(schemes == ["Snapshots"])
+        }
+
+        #expect(stdout.contains("Provide snapshot test schemes manually"))
+        #expect(
+            stdout.hasSuffix(
+                "Provide snapshot test schemes manually (comma-separated, " +
+                    "for example: MyAppSnapshots,MyFeatureSnapshots): "
+            )
+        )
+        #expect(messages == [
+            "No .xcscheme files were discovered automatically.",
+            "✓ ,",
+            "Provide at least one scheme.",
+            "✓ Snapshots",
+            "Selected schemes: Snapshots"
+        ])
+    }
+
+    @Test
     func promptSnapshotTestSchemesRetriesInvalidSelectionsAndDeduplicatesResults() async throws {
         var messages: [String] = []
         let prompter = TerminalSetupPrompter(output: { messages.append($0) })
@@ -126,7 +152,10 @@ struct TerminalSetupPrompterTests {
             #expect(schemes == ["FeatureSnapshots", "Snapshots"])
         }
 
-        #expect(stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all'): Select snapshot test schemes by number or name (comma-separated, or 'all'): ")
+        #expect(
+            stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all'): " +
+                "Select snapshot test schemes by number or name (comma-separated, or 'all'): "
+        )
         #expect(messages == [
             "Discovered schemes:",
             "1. Snapshots",
@@ -170,7 +199,10 @@ struct TerminalSetupPrompterTests {
             #expect(schemes == ["FeatureSnapshots"])
         }
 
-        #expect(stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all'): Select snapshot test schemes by number or name (comma-separated, or 'all'): ")
+        #expect(
+            stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all'): " +
+                "Select snapshot test schemes by number or name (comma-separated, or 'all'): "
+        )
         #expect(messages == [
             "Discovered schemes:",
             "1. Snapshots",
@@ -201,6 +233,35 @@ struct TerminalSetupPrompterTests {
         #expect(messages == [
             "Use arrow keys to move, space to toggle, and enter to confirm.",
             "Selected schemes: \u{001B}[32mFeatureSnapshots\u{001B}[0m"
+        ])
+    }
+
+    @Test
+    func promptSnapshotTestSchemesRetriesInteractiveSelectionWhenNothingIsSelected() throws {
+        var messages: [String] = []
+        let discoveredSchemes = ["Snapshots", "FeatureSnapshots"]
+        var promptAttempts = 0
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { true },
+            cursorSchemePrompter: { schemes in
+                promptAttempts += 1
+                #expect(schemes == discoveredSchemes)
+                if promptAttempts == 1 {
+                    return []
+                }
+                return ["Snapshots"]
+            }
+        )
+
+        let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
+
+        #expect(promptAttempts == 2)
+        #expect(schemes == ["Snapshots"])
+        #expect(messages == [
+            "Use arrow keys to move, space to toggle, and enter to confirm.",
+            "Select at least one scheme.",
+            "Selected schemes: \u{001B}[32mSnapshots\u{001B}[0m"
         ])
     }
 
@@ -282,5 +343,5 @@ private func withRedirectedStandardStreams<T>(
     clearerr(stdout)
     try stdoutPipe.fileHandleForWriting.close()
     let data = try stdoutPipe.fileHandleForReading.readToEnd() ?? Data()
-    return String(decoding: data, as: UTF8.self)
+    return String(bytes: data, encoding: .utf8) ?? ""
 }

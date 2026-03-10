@@ -6,18 +6,6 @@ struct InitialCompositionRoot {
     let schemeDiscoverer: SnapshotSchemeDiscovering
     let configWriter: ApertureConfigWriting
 
-    init(
-        fileSystem: FileSystemProvider,
-        prompter: InitialSetupPrompting,
-        schemeDiscoverer: SnapshotSchemeDiscovering,
-        configWriter: ApertureConfigWriting
-    ) {
-        self.fileSystem = fileSystem
-        self.prompter = prompter
-        self.schemeDiscoverer = schemeDiscoverer
-        self.configWriter = configWriter
-    }
-
     func run() async throws {
         let wizard = InitialSetupWizard(
             fileSystem: fileSystem,

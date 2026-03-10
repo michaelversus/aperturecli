@@ -5,12 +5,14 @@ ApertureCLI is a bridge CLI between Aperture Studio, a macOS snapshot test asset
 ApertureCLI is responsible for the config that defines the environment that snapshot tests require to execute properly.
 ApertureCLI reads metadata when the user executes snapshot tests and communicates with the Aperture Studio macOS app.
 
-## Build Commands
-- Build: `swift build`
+## Build
+- use the xcode mcp for build and run tests operations
 
-- Run: `swift run ApertureCLI`
+## Files and Folders
+- Use xcode mcp to create directories and files for the project
 
-- Test: `swift test`
+## Apple Documentation
+- Use xcode mcp to check apple documentation when needed
 
 ## Git
 - Commits: Conventional Commits (feat|fix|refactor|build|ci|chore|docs|style|perf|test)
@@ -36,6 +38,7 @@ ApertureCLI reads metadata when the user executes snapshot tests and communicate
 - Use Combine for simple async operations
 - Overcomplicate simple features
 - Leave unused code everywhere
+- add swiftlint disable flags without asking first
 
 ### Testing Strategy
 
