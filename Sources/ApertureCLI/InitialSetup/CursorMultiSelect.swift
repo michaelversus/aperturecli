@@ -4,7 +4,7 @@ import Darwin
 struct CursorMultiSelect {
     let options: [String]
 
-    func run(environment: Environment = .live) throws -> [String] {
+    func run(environment: Environment = .live()) throws -> [String] {
         let rawMode = try environment.makeRawMode()
         try rawMode.enable()
         defer {
@@ -172,18 +172,20 @@ struct CursorMultiSelect {
         return 24
     }
 
-    struct Environment: @unchecked Sendable {
+    struct Environment {
         let makeRawMode: () throws -> any TerminalMode
         let readKey: () -> Key
         let writeToStdout: (String) -> Void
         let terminalRows: () -> Int
 
-        static let live = Environment(
-            makeRawMode: { try TerminalRawMode() },
-            readKey: CursorMultiSelect.readKey,
-            writeToStdout: CursorMultiSelect.writeToStdout,
-            terminalRows: CursorMultiSelect.terminalRows
-        )
+        static func live() -> Environment {
+            Environment(
+                makeRawMode: { try TerminalRawMode() },
+                readKey: CursorMultiSelect.readKey,
+                writeToStdout: CursorMultiSelect.writeToStdout,
+                terminalRows: CursorMultiSelect.terminalRows
+            )
+        }
     }
 
     enum Key {

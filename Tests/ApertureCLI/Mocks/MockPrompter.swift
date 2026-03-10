@@ -50,9 +50,9 @@ final class MockPrompter: InitialSetupPrompting {
 
     func performWithSpinner<T>(
         prefix: String,
-        operation: @escaping () throws -> T
+        operation: @escaping () async throws -> T
     ) async throws -> T {
         spinnerPrefixes.append(prefix)
-        return try operation()
+        return try await operation()
     }
 }

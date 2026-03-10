@@ -146,21 +146,30 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
 
     func performWithSpinner<T>(
         prefix: String,
-        operation: @escaping () throws -> T
+        operation: @escaping () async throws -> T
     ) async throws -> T {
         guard supportsInteractiveTerminal() else {
-            return try operation()
+            return try await operation()
         }
 
-        let spinnerTask = Task { @Sendable in
-            await Self.renderSpinner(prefix: prefix)
-        }
-        defer {
-            spinnerTask.cancel()
-            Self.writeToStdout("\r\u{1B}[2K")
-        }
+        return try await withThrowingTaskGroup(of: Void.self, returning: T.self) { group in
+            group.addTask {
+                await Self.renderSpinner(prefix: prefix)
+            }
 
-        return try operation()
+            do {
+                let value = try await operation()
+                group.cancelAll()
+                while try await group.next() != nil {}
+                Self.writeToStdout("\r\u{1B}[2K")
+                return value
+            } catch {
+                group.cancelAll()
+                while try await group.next() != nil {}
+                Self.writeToStdout("\r\u{1B}[2K")
+                throw error
+            }
+        }
     }
 
     private func promptRequiredListValue(_ prompt: String) throws -> [String] {
@@ -216,7 +225,6 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         term.c_cflag |= tcflag_t(CS8)
 
         _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &term)
-        TerminalRawModeState.active = 0
     }
 
     private static func renderSpinner(prefix: String) async {

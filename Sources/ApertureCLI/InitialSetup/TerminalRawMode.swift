@@ -6,11 +6,12 @@ protocol TerminalMode {
     func disable()
 }
 
-struct TerminalRawMode: TerminalMode {
+final class TerminalRawMode: TerminalMode {
     private let original: termios
     private let terminal: TerminalOperations
+    private var isEnabled = false
 
-    init(terminal: TerminalOperations = .live) throws {
+    init(terminal: TerminalOperations = .live()) throws {
         self.terminal = terminal
         var term = termios()
         guard terminal.getAttributes(STDIN_FILENO, &term) == 0 else {
@@ -28,18 +29,19 @@ struct TerminalRawMode: TerminalMode {
             throw CleanExit.message("Unable to configure terminal for interactive selection.")
         }
 
-        TerminalRawModeState.original = original
-        TerminalRawModeState.setAttributes = terminal.setAttributes
-        TerminalRawModeState.active = 1
+        isEnabled = true
         terminal.installRestoreSignalHandlers()
     }
 
     func disable() {
-        restoreTerminalIfNeeded()
+        guard isEnabled else { return }
+        var restored = original
+        _ = terminal.setAttributes(STDIN_FILENO, TCSAFLUSH, &restored)
+        isEnabled = false
     }
 }
 
-struct TerminalOperations: @unchecked Sendable {
+struct TerminalOperations {
     typealias GetAttributes = (
         _ fileDescriptor: Int32,
         _ terminalAttributes: UnsafeMutablePointer<termios>
@@ -54,34 +56,19 @@ struct TerminalOperations: @unchecked Sendable {
     let setAttributes: SetAttributes
     let installRestoreSignalHandlers: () -> Void
 
-    static let live = TerminalOperations(
-        getAttributes: tcgetattr,
-        setAttributes: { fileDescriptor, actions, terminalAttributes in
-            tcsetattr(fileDescriptor, actions, terminalAttributes)
-        },
-        installRestoreSignalHandlers: installTerminalRestoreSignalHandlers
-    )
-}
-
-enum TerminalRawModeState {
-    nonisolated(unsafe) static var original = termios()
-    nonisolated(unsafe) static var setAttributes: TerminalOperations.SetAttributes?
-    nonisolated(unsafe) static var active: Darwin.sig_atomic_t = 0
-}
-
-private func restoreTerminalIfNeeded() {
-    guard TerminalRawModeState.active == 1 else { return }
-    var original = TerminalRawModeState.original
-    let setAttributes = TerminalRawModeState.setAttributes ?? { fileDescriptor, actions, terminalAttributes in
-        tcsetattr(fileDescriptor, actions, terminalAttributes)
+    static func live() -> TerminalOperations {
+        TerminalOperations(
+            getAttributes: tcgetattr,
+            setAttributes: { fileDescriptor, actions, terminalAttributes in
+                tcsetattr(fileDescriptor, actions, terminalAttributes)
+            },
+            installRestoreSignalHandlers: installTerminalRestoreSignalHandlers
+        )
     }
-    _ = setAttributes(STDIN_FILENO, TCSAFLUSH, &original)
-    TerminalRawModeState.setAttributes = nil
-    TerminalRawModeState.active = 0
 }
 
 private func terminalRestoreSignalHandler(_ signal: Int32) {
-    restoreTerminalIfNeeded()
+    restoreTerminalToCanonicalMode()
     _ = Darwin.signal(signal, SIG_DFL)
     Darwin.raise(signal)
 }
@@ -91,4 +78,16 @@ private func installTerminalRestoreSignalHandlers() {
     _ = Darwin.signal(SIGTERM, terminalRestoreSignalHandler)
     _ = Darwin.signal(SIGHUP, terminalRestoreSignalHandler)
     _ = Darwin.signal(SIGQUIT, terminalRestoreSignalHandler)
+}
+
+private func restoreTerminalToCanonicalMode() {
+    var term = termios()
+    guard tcgetattr(STDIN_FILENO, &term) == 0 else { return }
+
+    term.c_lflag |= tcflag_t(ECHO | ICANON | ISIG | IEXTEN)
+    term.c_iflag |= tcflag_t(ICRNL | IXON | BRKINT | INPCK | ISTRIP)
+    term.c_oflag |= tcflag_t(OPOST)
+    term.c_cflag |= tcflag_t(CS8)
+
+    _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &term)
 }

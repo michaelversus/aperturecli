@@ -7,6 +7,6 @@ protocol InitialSetupPrompting {
     func promptSnapshotTestSchemes(from discoveredSchemes: [String]) throws -> [String]
     func performWithSpinner<T>(
         prefix: String,
-        operation: @escaping () throws -> T
+        operation: @escaping () async throws -> T
     ) async throws -> T
 }

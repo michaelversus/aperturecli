@@ -7,8 +7,6 @@ import ArgumentParser
 struct TerminalRawModeTests {
     @Test
     func initThrowsCleanExitWhenTerminalAttributesCannotBeRead() {
-        defer { resetTerminalRawModeState() }
-
         let terminal = TerminalOperations(
             getAttributes: { _, _ in -1 },
             setAttributes: { _, _, _ in 0 },
@@ -27,8 +25,6 @@ struct TerminalRawModeTests {
 
     @Test
     func enableConfiguresRawModeAndDisableRestoresOriginalAttributes() throws {
-        defer { resetTerminalRawModeState() }
-
         let original = makeTermios(
             localFlags: tcflag_t(ECHO | ICANON | ISIG),
             inputFlags: tcflag_t(ICRNL | IXON | IXOFF)
@@ -60,9 +56,6 @@ struct TerminalRawModeTests {
 
         let raw = try #require(configuredRaw)
         #expect(installCount == 1)
-        #expect(TerminalRawModeState.active == 1)
-        #expect(TerminalRawModeState.original.c_lflag == original.c_lflag)
-        #expect(TerminalRawModeState.original.c_iflag == original.c_iflag)
         #expect(raw.c_lflag & tcflag_t(ECHO) == 0)
         #expect(raw.c_lflag & tcflag_t(ICANON) == 0)
         #expect(raw.c_lflag & tcflag_t(ISIG) == tcflag_t(ISIG))
@@ -75,14 +68,10 @@ struct TerminalRawModeTests {
         let restored = try #require(restoredAttributes)
         #expect(restored.c_lflag == original.c_lflag)
         #expect(restored.c_iflag == original.c_iflag)
-        #expect(TerminalRawModeState.active == 0)
-        #expect(TerminalRawModeState.setAttributes == nil)
     }
 
     @Test
     func enableThrowsCleanExitWhenRawModeConfigurationFails() throws {
-        defer { resetTerminalRawModeState() }
-
         let original = makeTermios(localFlags: tcflag_t(ECHO | ICANON), inputFlags: tcflag_t(ICRNL | IXON))
         var installCount = 0
         let terminal = TerminalOperations(
@@ -106,30 +95,23 @@ struct TerminalRawModeTests {
         }
 
         #expect(installCount == 0)
-        #expect(TerminalRawModeState.active == 0)
-        #expect(TerminalRawModeState.setAttributes == nil)
     }
 
     @Test
     func disableDoesNothingWhenRawModeIsInactive() {
-        defer { resetTerminalRawModeState() }
-
         var restoreCount = 0
-        TerminalRawModeState.setAttributes = { _, _, _ in
-            restoreCount += 1
-            return 0
-        }
-        TerminalRawModeState.active = 0
 
         let rawMode = try? TerminalRawMode(terminal: TerminalOperations(
             getAttributes: { _, _ in 0 },
-            setAttributes: { _, _, _ in 0 },
+            setAttributes: { _, _, _ in
+                restoreCount += 1
+                return 0
+            },
             installRestoreSignalHandlers: {}
         ))
         rawMode?.disable()
 
         #expect(restoreCount == 0)
-        #expect(TerminalRawModeState.setAttributes != nil)
     }
 }
 
@@ -138,10 +120,4 @@ private func makeTermios(localFlags: tcflag_t, inputFlags: tcflag_t) -> termios 
     attributes.c_lflag = localFlags
     attributes.c_iflag = inputFlags
     return attributes
-}
-
-private func resetTerminalRawModeState() {
-    TerminalRawModeState.original = termios()
-    TerminalRawModeState.setAttributes = nil
-    TerminalRawModeState.active = 0
 }
