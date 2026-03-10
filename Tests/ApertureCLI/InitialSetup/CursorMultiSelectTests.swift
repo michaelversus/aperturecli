@@ -63,4 +63,115 @@ struct CursorMultiSelectTests {
         #expect(frame.contains("  ( ) B\n> ( ) C\n"))
         #expect(frame.contains("Showing 2-3 of 4\n"))
     }
+
+    @Test
+    func runReturnsHighlightedOptionWhenNothingIsSelected() throws {
+        let selector = CursorMultiSelect(options: ["Snapshots", "FeatureSnapshots", "UITests"])
+        var writtenOutput = [String]()
+        var enableCount = 0
+        var disableCount = 0
+        var keys: [CursorMultiSelect.Key] = [.arrowDown, .enter]
+        let environment = CursorMultiSelect.Environment(
+            makeRawMode: {
+                MockTerminalMode(
+                    enable: { enableCount += 1 },
+                    disable: { disableCount += 1 }
+                )
+            },
+            readKey: { keys.removeFirst() },
+            writeToStdout: { writtenOutput.append($0) },
+            terminalRows: { 12 }
+        )
+
+        let selected = try selector.run(environment: environment)
+
+        #expect(selected == ["FeatureSnapshots"])
+        #expect(enableCount == 1)
+        #expect(disableCount == 1)
+        #expect(writtenOutput.first == "\u{1B}[?25l")
+        #expect(writtenOutput.suffix(2).elementsEqual(["\u{1B}[?25h", "\n"]))
+    }
+
+    @Test
+    func runReturnsSortedToggledSelectionsWhenConfirmed() throws {
+        let selector = CursorMultiSelect(options: ["Snapshots", "FeatureSnapshots", "UITests"])
+        var writtenOutput = [String]()
+        var keys: [CursorMultiSelect.Key] = [.space, .arrowDown, .arrowDown, .space, .enter]
+        let environment = CursorMultiSelect.Environment(
+            makeRawMode: {
+                MockTerminalMode(enable: {}, disable: {})
+            },
+            readKey: { keys.removeFirst() },
+            writeToStdout: { writtenOutput.append($0) },
+            terminalRows: { 14 }
+        )
+
+        let selected = try selector.run(environment: environment)
+
+        #expect(selected == ["Snapshots", "UITests"])
+        #expect(writtenOutput.count == 8)
+    }
+
+    @Test(arguments: [
+        ([CursorMultiSelect.Key.arrowUp, .enter], "UITests"),
+        ([CursorMultiSelect.Key.arrowDown, .arrowDown, .arrowDown, .enter], "Snapshots")
+    ])
+    func runWrapsCursorMovementAroundTheOptions(
+        keys: [CursorMultiSelect.Key],
+        expectedSelection: String
+    ) throws {
+        let selector = CursorMultiSelect(options: ["Snapshots", "FeatureSnapshots", "UITests"])
+        var remainingKeys = keys
+        let environment = CursorMultiSelect.Environment(
+            makeRawMode: {
+                MockTerminalMode(enable: {}, disable: {})
+            },
+            readKey: { remainingKeys.removeFirst() },
+            writeToStdout: { _ in },
+            terminalRows: { 12 }
+        )
+
+        let selected = try selector.run(environment: environment)
+
+        #expect(selected == [expectedSelection])
+    }
+
+    @Test
+    func runIgnoresUnknownKeysAndAllowsDeselection() throws {
+        let selector = CursorMultiSelect(options: ["Snapshots", "FeatureSnapshots", "UITests"])
+        var keys: [CursorMultiSelect.Key] = [.unknown, .space, .space, .enter]
+        let environment = CursorMultiSelect.Environment(
+            makeRawMode: {
+                MockTerminalMode(enable: {}, disable: {})
+            },
+            readKey: { keys.removeFirst() },
+            writeToStdout: { _ in },
+            terminalRows: { 12 }
+        )
+
+        let selected = try selector.run(environment: environment)
+
+        #expect(selected == ["Snapshots"])
+    }
+}
+
+private final class MockTerminalMode: TerminalMode {
+    private let onEnable: () throws -> Void
+    private let onDisable: () -> Void
+
+    init(
+        enable: @escaping () throws -> Void,
+        disable: @escaping () -> Void
+    ) {
+        self.onEnable = enable
+        self.onDisable = disable
+    }
+
+    func enable() throws {
+        try onEnable()
+    }
+
+    func disable() {
+        onDisable()
+    }
 }

@@ -4,19 +4,19 @@ import Darwin
 struct CursorMultiSelect {
     let options: [String]
 
-    func run() throws -> [String] {
-        let rawMode = try TerminalRawMode()
+    func run(environment: Environment = .live) throws -> [String] {
+        let rawMode = try environment.makeRawMode()
         try rawMode.enable()
         defer {
             rawMode.disable()
-            writeToStdout("\u{1B}[?25h")
-            writeToStdout("\n")
+            environment.writeToStdout("\u{1B}[?25h")
+            environment.writeToStdout("\n")
         }
 
-        writeToStdout("\u{1B}[?25l")
+        environment.writeToStdout("\u{1B}[?25l")
 
         var cursor = 0
-        let viewportSize = max(5, terminalRows() - 8)
+        let viewportSize = max(5, environment.terminalRows() - 8)
         var topIndex = 0
         var selected = Set<Int>()
         var linesRendered = 0
@@ -27,10 +27,11 @@ struct CursorMultiSelect {
                 topIndex: topIndex,
                 viewportSize: viewportSize,
                 selected: selected,
-                previousLines: linesRendered
+                previousLines: linesRendered,
+                writeToStdout: environment.writeToStdout
             )
 
-            switch readKey() {
+            switch environment.readKey() {
             case .arrowUp:
                 cursor = (cursor - 1 + options.count) % options.count
                 topIndex = updatedTopIndex(cursor: cursor, topIndex: topIndex, viewportSize: viewportSize)
@@ -60,7 +61,8 @@ struct CursorMultiSelect {
         topIndex: Int,
         viewportSize: Int,
         selected: Set<Int>,
-        previousLines: Int
+        previousLines: Int,
+        writeToStdout: (String) -> Void = Self.writeToStdout
     ) -> Int {
         let frame = makeFrame(
             cursor: cursor,
@@ -121,30 +123,35 @@ struct CursorMultiSelect {
         return topIndex
     }
 
-    private func readKey() -> Key {
+    static func readKey() -> Key {
         var byte: UInt8 = 0
         guard read(STDIN_FILENO, &byte, 1) == 1 else {
             return .unknown
         }
 
+        // Arrow keys arrive as ANSI escape sequences: ESC [`A`/`B`].
         if byte == 0x1B {
             var sequence = [UInt8](repeating: 0, count: 2)
             guard read(STDIN_FILENO, &sequence[0], 1) == 1, read(STDIN_FILENO, &sequence[1], 1) == 1 else {
                 return .unknown
             }
+            // ESC [ A
             if sequence[0] == 0x5B && sequence[1] == 0x41 {
                 return .arrowUp
             }
+            // ESC [ B
             if sequence[0] == 0x5B && sequence[1] == 0x42 {
                 return .arrowDown
             }
             return .unknown
         }
 
+        // Space toggles the currently highlighted option.
         if byte == 0x20 {
             return .space
         }
 
+        // Terminals may send either LF or CR for Enter.
         if byte == 0x0A || byte == 0x0D {
             return .enter
         }
@@ -152,12 +159,12 @@ struct CursorMultiSelect {
         return .unknown
     }
 
-    private func writeToStdout(_ text: String) {
+    static func writeToStdout(_ text: String) {
         guard let data = text.data(using: .utf8) else { return }
         FileHandle.standardOutput.write(data)
     }
 
-    private func terminalRows() -> Int {
+    static func terminalRows() -> Int {
         var windowSize = winsize()
         if ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0, windowSize.ws_row > 0 {
             return Int(windowSize.ws_row)
@@ -165,7 +172,21 @@ struct CursorMultiSelect {
         return 24
     }
 
-    private enum Key {
+    struct Environment: @unchecked Sendable {
+        let makeRawMode: () throws -> any TerminalMode
+        let readKey: () -> Key
+        let writeToStdout: (String) -> Void
+        let terminalRows: () -> Int
+
+        static let live = Environment(
+            makeRawMode: { try TerminalRawMode() },
+            readKey: CursorMultiSelect.readKey,
+            writeToStdout: CursorMultiSelect.writeToStdout,
+            terminalRows: CursorMultiSelect.terminalRows
+        )
+    }
+
+    enum Key {
         case arrowUp
         case arrowDown
         case space

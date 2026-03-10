@@ -1,7 +1,12 @@
 import Darwin
 import ArgumentParser
 
-struct TerminalRawMode {
+protocol TerminalMode {
+    func enable() throws
+    func disable()
+}
+
+struct TerminalRawMode: TerminalMode {
     private let original: termios
     private let terminal: TerminalOperations
 
