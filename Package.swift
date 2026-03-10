@@ -5,9 +5,17 @@ import PackageDescription
 
 let package = Package(
     name: "ApertureCLI",
+    platforms: [.macOS(.v14)],
+    dependencies: [
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0")
+    ],
     targets: [
         .executableTarget(
-            name: "ApertureCLI"
+            name: "ApertureCLI",
+            dependencies: [
+                .product(name: "ArgumentParser", package: "swift-argument-parser")
+            ]
         ),
+        .testTarget(name: "ApertureCLITests", dependencies: ["ApertureCLI"])
     ]
 )
