@@ -30,6 +30,19 @@ protocol FileSystemProvider {
         options mask: FileManager.DirectoryEnumerationOptions
     ) throws -> [URL]
 
+    /// Recursively returns all items in the directory at the specified URL.
+    /// - Parameters:
+    ///  - url: The URL of the directory to enumerate.
+    ///  - keys: An array of resource keys to prefetch for each item.
+    ///  - mask: Options for directory enumeration.
+    ///  - Returns: An array of URLs for all descendant items.
+    ///  - Throws: An error if the directory cannot be enumerated.
+    func recursiveContentsOfDirectory(
+        at url: URL,
+        includingPropertiesForKeys keys: [URLResourceKey]?,
+        options mask: FileManager.DirectoryEnumerationOptions
+    ) throws -> [URL]
+
     /// Reads the contents of a file as a string.
     /// - Parameter path: A file path (absolute or relative).
     func readFile(atPath path: String) throws -> String

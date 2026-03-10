@@ -60,6 +60,26 @@ final class FileSystem: FileSystemProvider {
         )
     }
 
+    func recursiveContentsOfDirectory(
+        at url: URL,
+        includingPropertiesForKeys keys: [URLResourceKey]?,
+        options mask: FileManager.DirectoryEnumerationOptions
+    ) throws -> [URL] {
+        guard let enumerator = fileManager.enumerator(
+            at: url,
+            includingPropertiesForKeys: keys,
+            options: mask
+        ) else {
+            throw CocoaError(.fileReadUnknown)
+        }
+
+        var urls: [URL] = []
+        for case let itemURL as URL in enumerator {
+            urls.append(itemURL)
+        }
+        return urls
+    }
+
     func readFile(atPath path: String) throws -> String {
         try String(contentsOfFile: path)
     }

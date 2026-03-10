@@ -1,16 +1,19 @@
-//
-//  Test.swift
-//  ApertureCLI
-//
-//  Created by Michalis Karagiorgos on 10/3/26.
-//
-
 import Testing
+@testable import ApertureCLI
 
-struct Test {
-
-    @Test func ApertureCLITests() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+struct ApertureCLITests {
+    @Test
+    func configurationUsesInitialAsDefaultSubcommand() {
+        #expect(ApertureCLI.configuration.abstract == "CLI bridge for Aperture Studio app and Xcode")
+        #expect(ApertureCLI.configuration.version == version)
+        #expect(
+            ApertureCLI.configuration.subcommands.contains {
+                String(describing: $0) == String(describing: ApertureCLI.Initial.self)
+            }
+        )
+        #expect(
+            String(describing: ApertureCLI.configuration.defaultSubcommand)
+                == String(describing: Optional(ApertureCLI.Initial.self))
+        )
     }
-
 }
