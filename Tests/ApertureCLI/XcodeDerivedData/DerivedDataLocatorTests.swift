@@ -4,6 +4,15 @@ import Testing
 
 @Suite("DerivedDataLocator Tests")
 struct DerivedDataLocatorTests {
+    private struct DerivedDataHierarchy {
+        let libraryURL: URL
+        let derivedDataRoot: URL
+        let newestURL: URL
+        let olderURL: URL
+        let unrelatedURL: URL
+        let cleanupURL: URL
+    }
+
     // MARK: - Tests
 
     @Test("test locateDerivedData without project name throws missingInputs")
@@ -115,15 +124,9 @@ struct DerivedDataLocatorTests {
             .appendingPathComponent("DerivedData", isDirectory: true)
     }
 
-    private func prepareDerivedDataHierarchy(projectName: String) throws -> (
-        libraryURL: URL,
-        derivedDataRoot: URL,
-        newestURL: URL,
-        olderURL: URL,
-        unrelatedURL: URL,
-        cleanupURL: URL
-    ) {
-        let baseURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+    private func prepareDerivedDataHierarchy(projectName: String) throws -> DerivedDataHierarchy {
+        let baseURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
         let derivedDataRoot = derivedDataRootURL(for: baseURL)
         try FileManager.default.createDirectory(at: derivedDataRoot, withIntermediateDirectories: true)
 
@@ -142,7 +145,7 @@ struct DerivedDataLocatorTests {
             .modificationDate: Date(timeIntervalSince1970: 2000)
         ], ofItemAtPath: newestURL.path)
 
-        return (
+        return DerivedDataHierarchy(
             libraryURL: baseURL,
             derivedDataRoot: derivedDataRoot,
             newestURL: newestURL,

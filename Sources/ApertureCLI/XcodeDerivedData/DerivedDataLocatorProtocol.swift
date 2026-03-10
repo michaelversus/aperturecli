@@ -7,7 +7,8 @@ protocol DerivedDataLocatorProtocol {
     ///   - projectName: The name of the Xcode project whose DerivedData should be searched.
     ///   - dataStorePath: An optional explicit DataStore path that takes precedence when provided.
     /// - Returns: Paths describing the resolved DerivedData location and whether helper paths should be appended.
-    /// - Throws: ``DerivedDataLocatorError`` when the provided inputs are invalid or the DerivedData directory cannot be found.
+    /// - Throws: ``DerivedDataLocatorError`` when the provided inputs are invalid
+    ///   or the DerivedData directory cannot be found.
     func locateDerivedData(
         projectName: String?
     ) throws -> DerivedDataPaths

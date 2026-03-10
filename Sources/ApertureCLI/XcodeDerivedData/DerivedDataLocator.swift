@@ -1,6 +1,7 @@
 import Foundation
 
-/// Resolves the appropriate DerivedData directory either by explicit path or by inferring the latest entry for a project.
+/// Resolves the appropriate DerivedData directory either by explicit path
+/// or by inferring the latest entry for a project.
 struct DerivedDataLocator: DerivedDataLocatorProtocol {
     private let fileSystem: FileSystemProvider
     private let derivedDataRoot: URL
@@ -18,12 +19,17 @@ struct DerivedDataLocator: DerivedDataLocatorProtocol {
             .appendingPathComponent("DerivedData", isDirectory: true)
     }
 
-    /// Finds the DerivedData directory for the given inputs and indicates whether helper paths should be appended.
+    /// Finds the DerivedData directory for the given inputs and indicates
+    /// whether helper paths should be appended.
     /// - Parameters:
-    ///   - projectName: The name of the Xcode project whose DerivedData should be inferred when no explicit path is supplied.
-    ///   - dataStorePath: An optional explicit DataStore path which, when present, takes precedence over project resolution.
-    /// - Returns: A ``DerivedDataPaths`` value containing the resolved URL and whether additional IndexStore paths should be appended.
-    /// - Throws: ``DerivedDataLocatorError`` when inputs are missing, invalid, or when the DerivedData directory cannot be found.
+    ///   - projectName: The name of the Xcode project whose DerivedData should
+    ///     be inferred when no explicit path is supplied.
+    ///   - dataStorePath: An optional explicit DataStore path which, when
+    ///     present, takes precedence over project resolution.
+    /// - Returns: A ``DerivedDataPaths`` value containing the resolved URL and
+    ///   whether additional IndexStore paths should be appended.
+    /// - Throws: ``DerivedDataLocatorError`` when inputs are missing, invalid,
+    ///   or when the DerivedData directory cannot be found.
     func locateDerivedData(
         projectName: String?
     ) throws -> DerivedDataPaths {
