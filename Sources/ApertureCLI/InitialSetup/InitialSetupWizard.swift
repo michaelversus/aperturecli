@@ -8,24 +8,68 @@ struct InitialSetupWizard {
     let schemePostActionSynchronizer: SchemePostActionSynchronizing
     let configWriter: ApertureConfigWriting
 
+    private struct SetupInput {
+        let repoRoot: String
+        let iosVersion: String
+        let simulatorModel: String
+        let xcodeVersion: String
+        let projectFileName: String
+        let spmPackagesContainerPath: String
+        let snapshotTestSchemes: [String]
+    }
+
     func run() async throws {
         let repoRoot = fileSystem.currentDirectoryPath()
         let repoRootURL = URL(fileURLWithPath: repoRoot, isDirectory: true)
 
-        if configWriter.configExists(at: repoRoot) {
-            let shouldReplace = try prompter.promptConfirmation(
-                ".aperture.json already exists. Replace it?",
-                defaultValue: false
-            )
-
-            if shouldReplace {
-                prompter.writeMessage("Replacing existing configuration.")
-            } else {
-                prompter.writeMessage("Keeping existing configuration. Setup cancelled.")
-                throw CleanExit.message("Setup cancelled.")
+        try confirmConfigReplacementIfNeeded(at: repoRoot)
+        let input = try await collectSetupInput(repoRoot: repoRoot, repoRootURL: repoRootURL)
+        let syncResult = try await prompter.performWithSpinner(
+            prefix: "Synchronizing scheme post-actions",
+            operation: {
+                try schemePostActionSynchronizer.syncPostActions(
+                    repoRoot: input.repoRoot,
+                    projectFileName: input.projectFileName,
+                    spmPackagesContainerPath: input.spmPackagesContainerPath,
+                    selectedSchemeNames: input.snapshotTestSchemes
+                )
             }
+        )
+        SchemePostActionSyncReporting.lines(for: syncResult).forEach(prompter.writeMessage)
+
+        let config = ApertureConfig(
+            repoRoot: input.repoRoot,
+            iosVersion: input.iosVersion,
+            simulatorModel: input.simulatorModel,
+            xcodeVersion: input.xcodeVersion,
+            projectFileName: input.projectFileName,
+            spmPackagesContainerPath: input.spmPackagesContainerPath,
+            snapshotTestSchemes: input.snapshotTestSchemes
+        )
+
+        try configWriter.write(config, at: input.repoRoot)
+        prompter.writeMessage("Saved configuration to \(input.repoRoot)/.aperture.json")
+    }
+
+    private func confirmConfigReplacementIfNeeded(at repoRoot: String) throws {
+        guard configWriter.configExists(at: repoRoot) else {
+            return
         }
 
+        let shouldReplace = try prompter.promptConfirmation(
+            ".aperture.json already exists. Replace it?",
+            defaultValue: false
+        )
+
+        if shouldReplace {
+            prompter.writeMessage("Replacing existing configuration.")
+        } else {
+            prompter.writeMessage("Keeping existing configuration. Setup cancelled.")
+            throw CleanExit.message("Setup cancelled.")
+        }
+    }
+
+    private func collectSetupInput(repoRoot: String, repoRootURL: URL) async throws -> SetupInput {
         let iosVersion = try prompter.promptRequiredValue("iOS version (for example: 18.2)")
         let simulatorModel = try prompter.promptRequiredValue("Simulator model (for example: iPhone 16 Pro)")
         let xcodeVersion = try prompter.promptRequiredValue("Xcode version (for example: 16.2)")
@@ -45,20 +89,8 @@ struct InitialSetupWizard {
             }
         )
         let snapshotTestSchemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
-        let syncResult = try await prompter.performWithSpinner(
-            prefix: "Synchronizing scheme post-actions",
-            operation: {
-                try schemePostActionSynchronizer.syncPostActions(
-                    repoRoot: repoRoot,
-                    projectFileName: projectFileName,
-                    spmPackagesContainerPath: spmPackagesContainerPath,
-                    selectedSchemeNames: snapshotTestSchemes
-                )
-            }
-        )
-        SchemePostActionSyncReporting.lines(for: syncResult).forEach(prompter.writeMessage)
 
-        let config = ApertureConfig(
+        return SetupInput(
             repoRoot: repoRoot,
             iosVersion: iosVersion,
             simulatorModel: simulatorModel,
@@ -67,9 +99,6 @@ struct InitialSetupWizard {
             spmPackagesContainerPath: spmPackagesContainerPath,
             snapshotTestSchemes: snapshotTestSchemes
         )
-
-        try configWriter.write(config, at: repoRoot)
-        prompter.writeMessage("Saved configuration to \(repoRoot)/.aperture.json")
     }
 
     private func promptExistingPathValue(_ prompt: String, relativeTo rootURL: URL) throws -> String {

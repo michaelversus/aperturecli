@@ -37,11 +37,13 @@ struct SchemePostActionUpdaterTests {
                 <Scheme version = "1.7">
                   <TestAction buildConfiguration = "Debug">
                     <PostActions>
-                      <ExecutionAction ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+                      <ExecutionAction
+                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
                         <ActionContent title = "User Action" scriptText = "echo user&#10;">
                         </ActionContent>
                       </ExecutionAction>
-                      <ExecutionAction ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+                      <ExecutionAction
+                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
                         <ActionContent title = "ApertureCLI: Post Test Action" scriptText = "echo old&#10;">
                         </ActionContent>
                       </ExecutionAction>
