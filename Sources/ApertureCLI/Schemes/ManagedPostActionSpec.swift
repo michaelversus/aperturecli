@@ -13,6 +13,9 @@ struct ManagedPostActionSpec: Sendable {
     }
 
     func scriptText(for schemeName: String) -> String {
-        "echo \"Hello \(schemeName)\"\n"
+        """
+        /Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse --scheme "\(schemeName)" --project-name "$PROJECT_NAME"
+        """
+            + "\n"
     }
 }

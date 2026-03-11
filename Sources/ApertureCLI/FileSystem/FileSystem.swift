@@ -94,4 +94,11 @@ final class FileSystem: FileSystemProvider {
     func writeFile(_ contents: String, toPath path: String) throws {
         try contents.write(toFile: path, atomically: true, encoding: .utf8)
     }
+
+    func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws {
+        try fileManager.createDirectory(
+            atPath: path,
+            withIntermediateDirectories: withIntermediateDirectories
+        )
+    }
 }

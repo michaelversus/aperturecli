@@ -56,4 +56,10 @@ protocol FileSystemProvider {
     ///   - contents: The string to write.
     ///   - path: A file path (absolute or relative).
     func writeFile(_ contents: String, toPath path: String) throws
+
+    /// Creates a directory at the given path.
+    /// - Parameters:
+    ///   - path: A directory path (absolute or relative).
+    ///   - withIntermediateDirectories: Whether to create missing parent directories.
+    func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws
 }

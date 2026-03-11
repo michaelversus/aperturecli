@@ -288,6 +288,12 @@ private func assertNormalizedSetupResult(_ context: NormalizedSetupContext) thro
     #expect(context.prompter.messages.contains("Path does not exist: MissingPackages. Please try again."))
     #expect(context.prompter.messages.contains("Matched schemes: 1"))
     #expect(context.prompter.messages.contains("Updated scheme files: 1"))
+    #expect(context.prompter.messages.contains("Updated scheme file paths:"))
+    #expect(
+        context.prompter.messages.contains(
+            " - /repo/MyApp.xcodeproj/xcshareddata/xcschemes/Snapshots.xcscheme"
+        )
+    )
     #expect(context.prompter.messages.contains("Saved configuration to /repo/.aperture.json"))
     #expect(context.fileSystem.fileExistsCalls.contains("/repo/MyApp.xcodeproj"))
 }

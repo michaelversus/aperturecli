@@ -7,6 +7,11 @@ final class MockFileSystem: FileSystemProvider {
         let path: String
     }
 
+    struct CreateDirectoryOperation {
+        let path: String
+        let withIntermediateDirectories: Bool
+    }
+
     let currentDirectoryPathValue: String
     let fileExistsResults: [String: Bool]
     let existingPaths: Set<String>
@@ -17,6 +22,7 @@ final class MockFileSystem: FileSystemProvider {
 
     private(set) var fileExistsCalls: [String] = []
     private(set) var writeOperations: [WriteOperation] = []
+    private(set) var createDirectoryOperations: [CreateDirectoryOperation] = []
 
     init(
         currentDirectoryPath: String = "/repo",
@@ -101,5 +107,14 @@ final class MockFileSystem: FileSystemProvider {
 
     func writeFile(_ contents: String, toPath path: String) throws {
         writeOperations.append(WriteOperation(contents: contents, path: path))
+    }
+
+    func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws {
+        createDirectoryOperations.append(
+            CreateDirectoryOperation(
+                path: path,
+                withIntermediateDirectories: withIntermediateDirectories
+            )
+        )
     }
 }

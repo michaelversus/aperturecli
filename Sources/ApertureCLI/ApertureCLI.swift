@@ -4,7 +4,7 @@ import ArgumentParser
     static let configuration = CommandConfiguration(
         abstract: "CLI bridge for Aperture Studio app and Xcode",
         version: version,
-        subcommands: [Initial.self, Schemes.self],
+        subcommands: [Initial.self, Schemes.self, XCResult.self],
         defaultSubcommand: Initial.self
     )
 }
