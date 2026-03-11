@@ -26,7 +26,10 @@ struct SchemePostActionUpdaterTests {
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
         #expect(
             write.contents.contains(
-                "scriptText=\"/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;"
+                """
+                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
+                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                """
             )
         )
     }
@@ -66,7 +69,10 @@ struct SchemePostActionUpdaterTests {
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
         #expect(
             write.contents.contains(
-                "scriptText=\"/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;"
+                """
+                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
+                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                """
             )
         )
         #expect(write.contents.contains("scriptText=\"echo old") == false)
@@ -106,7 +112,8 @@ struct SchemePostActionUpdaterTests {
                         ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
                         <ActionContent
                           title = "ApertureCLI: Post Test Action"
-                          scriptText = "aperture xcresult parse --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot; &#10;">
+                          scriptText = "aperture xcresult parse --scheme &quot;MyScheme&quot; \
+                          --project-name &quot;$PROJECT_NAME&quot; &#10;">
                         </ActionContent>
                       </ExecutionAction>
                     </PostActions>
@@ -124,7 +131,10 @@ struct SchemePostActionUpdaterTests {
         #expect(write.contents.contains("scriptText=\"aperture xcresult parse") == false)
         #expect(
             write.contents.contains(
-                "scriptText=\"/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;"
+                """
+                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
+                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                """
             )
         )
     }

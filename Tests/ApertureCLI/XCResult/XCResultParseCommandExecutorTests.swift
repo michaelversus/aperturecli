@@ -37,7 +37,9 @@ struct XCResultParseCommandExecutorTests {
     @Test
     func rethrowsResolverError() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
-        let resolver = MockXCResultPathResolver(result: .failure(XCResultPathResolverError.noXCResultFiles(path: "/tmp")))
+        let resolver = MockXCResultPathResolver(
+            result: .failure(XCResultPathResolverError.noXCResultFiles(path: "/tmp"))
+        )
         let executor = XCResultParseCommandExecutor(
             fileSystem: fileSystem,
             resolver: resolver,
