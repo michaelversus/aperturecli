@@ -10,12 +10,8 @@
 
 ## TODO
 - remove debug command for Test post Actions
-- make local spm packages directory optional
-- empty selection for schemes should mean no test post actions setup
-
 
 ## In Progress
-
 
 ## Done
 - init command under the user pwd wire things up
@@ -27,3 +23,5 @@
 - Implement xcresult parse command and initially use it just to find the proper xcresult files per xcsheme inside derived data.
 - use spawn bg process for test post actions
 - implement custom xcresult parsing
+- make local spm packages directory optional
+- empty selection for schemes should mean no test post actions setup

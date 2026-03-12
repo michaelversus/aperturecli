@@ -84,10 +84,14 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
     func promptSnapshotTestSchemes(from discoveredSchemes: [String]) throws -> [String] {
         if discoveredSchemes.isEmpty {
             output("No .xcscheme files were discovered automatically.")
-            let manualSchemes = try promptRequiredListValue(
+            let manualSchemes = try promptOptionalListValue(
                 "Provide snapshot test schemes manually (comma-separated, " +
-                    "for example: MyAppSnapshots,MyFeatureSnapshots)"
+                    "for example: MyAppSnapshots,MyFeatureSnapshots, leave empty to skip)"
             )
+            if manualSchemes.isEmpty {
+                output("No schemes selected. Skipping scheme post-action sync.")
+                return []
+            }
             output("Selected schemes: \(manualSchemes.map(green).joined(separator: ", "))")
             return manualSchemes
         }
@@ -95,6 +99,10 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         if supportsInteractiveTerminal() {
             output("Use arrow keys to move, space to toggle, and enter to confirm.")
             let selectedSchemes = try promptSnapshotTestSchemesWithCursor(from: discoveredSchemes)
+            if selectedSchemes.isEmpty {
+                output("No schemes selected. Skipping scheme post-action sync.")
+                return []
+            }
             output("Selected schemes: \(selectedSchemes.map(green).joined(separator: ", "))")
             return selectedSchemes
         }
@@ -109,10 +117,14 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         }
 
         while true {
-            let rawSelection = try promptRequiredValue(
-                "Select snapshot test schemes by number or name (comma-separated, or 'all')"
+            let rawSelection = try promptOptionalValue(
+                "Select snapshot test schemes by number or name (comma-separated, or 'all', leave empty to skip)"
             )
             let trimmedSelection = rawSelection.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedSelection.isEmpty {
+                output("No schemes selected. Skipping scheme post-action sync.")
+                return []
+            }
 
             if trimmedSelection.caseInsensitiveCompare("all") == .orderedSame {
                 output("Selected schemes: \(discoveredSchemes.map(green).joined(separator: ", "))")
@@ -149,12 +161,8 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
             }
 
             let uniqueSelection = uniquePreservingOrder(selected)
-            if !uniqueSelection.isEmpty {
-                output("Selected schemes: \(uniqueSelection.map(green).joined(separator: ", "))")
-                return uniqueSelection
-            }
-
-            output("Provide at least one scheme.")
+            output("Selected schemes: \(uniqueSelection.map(green).joined(separator: ", "))")
+            return uniqueSelection
         }
     }
 
@@ -186,30 +194,16 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         }
     }
 
-    private func promptRequiredListValue(_ prompt: String) throws -> [String] {
-        while true {
-            let rawValue = try promptRequiredValue(prompt)
-            let values = rawValue
-                .split(separator: ",")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-
-            if !values.isEmpty {
-                return values
-            }
-
-            output("Provide at least one scheme.")
-        }
+    private func promptOptionalListValue(_ prompt: String) throws -> [String] {
+        let rawValue = try promptOptionalValue(prompt)
+        return rawValue
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 
     private func promptSnapshotTestSchemesWithCursor(from schemes: [String]) throws -> [String] {
-        while true {
-            let selection = try cursorSchemePrompter(schemes)
-            if !selection.isEmpty {
-                return selection
-            }
-            output("Select at least one scheme.")
-        }
+        try cursorSchemePrompter(schemes)
     }
 
     private func uniquePreservingOrder(_ values: [String]) -> [String] {

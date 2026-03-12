@@ -25,19 +25,25 @@ struct InitialSetupWizard {
         try confirmConfigReplacementIfNeeded(at: repoRoot)
         let input = try await collectSetupInput(repoRoot: repoRoot, repoRootURL: repoRootURL)
         try ensureLogArtifactsDirectoryExists(at: input.repoRoot)
-        let syncResult = try await prompter.performWithSpinner(
-            prefix: "Synchronizing scheme post-actions",
-            operation: {
-                try schemePostActionSynchronizer.syncPostActions(
-                    repoRoot: input.repoRoot,
-                    projectFileName: input.projectFileName,
-                    projectName: URL(fileURLWithPath: input.projectFileName).deletingPathExtension().lastPathComponent,
-                    spmPackagesContainerPath: input.spmPackagesContainerPath,
-                    selectedSchemeNames: input.snapshotTestSchemes
-                )
-            }
-        )
-        SchemePostActionSyncReporting.lines(for: syncResult).forEach(prompter.writeMessage)
+        if input.snapshotTestSchemes.isEmpty {
+            prompter.writeMessage("No schemes selected. Skipping scheme post-action sync.")
+        } else {
+            let syncResult = try await prompter.performWithSpinner(
+                prefix: "Synchronizing scheme post-actions",
+                operation: {
+                    try schemePostActionSynchronizer.syncPostActions(
+                        repoRoot: input.repoRoot,
+                        projectFileName: input.projectFileName,
+                        projectName: URL(fileURLWithPath: input.projectFileName)
+                            .deletingPathExtension()
+                            .lastPathComponent,
+                        spmPackagesContainerPath: input.spmPackagesContainerPath,
+                        selectedSchemeNames: input.snapshotTestSchemes
+                    )
+                }
+            )
+            SchemePostActionSyncReporting.lines(for: syncResult).forEach(prompter.writeMessage)
+        }
 
         let config = ApertureConfig(
             repoRoot: input.repoRoot,
