@@ -34,9 +34,15 @@ extension ApertureCLI.XCResult {
                 fileSystem: fileSystem,
                 derivedDataLocator: locator
             )
+            let commandRunner = SubprocessRunner()
+            let xcresultToolClient = XCResultToolClient(
+                commandRunner: commandRunner,
+                fileSystem: fileSystem
+            )
             let executor = XCResultParseCommandExecutor(
                 fileSystem: fileSystem,
                 resolver: resolver,
+                xcresultToolClient: xcresultToolClient,
                 output: { line in Swift.print(line) }
             )
 
