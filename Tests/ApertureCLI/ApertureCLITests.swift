@@ -18,11 +18,6 @@ struct ApertureCLITests {
         )
         #expect(
             ApertureCLI.configuration.subcommands.contains {
-                String(describing: $0) == String(describing: ApertureCLI.Test.self)
-            }
-        )
-        #expect(
-            ApertureCLI.configuration.subcommands.contains {
                 String(describing: $0) == String(describing: ApertureCLI.XCResult.self)
             }
         )

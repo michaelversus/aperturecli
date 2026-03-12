@@ -97,9 +97,8 @@ struct XCResultToolClient: XCResultToolProviding {
     }
 
     private func runCommandWithRetry(executable: String, arguments: [String]) throws -> String {
-        // Result bundles can remain unreadable for several minutes after a run completes.
-        // Keep retrying transient "bundle not ready" errors within this time window.
-        let retryWindowSeconds = 8.0 * 60.0
+        // Keep retrying transient "bundle not ready" errors for up to 60 seconds.
+        let retryWindowSeconds = 60.0
         let maxDelaySeconds = 5.0
         let startDate = Date()
         var delaySeconds = 0.25

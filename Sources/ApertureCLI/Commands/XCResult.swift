@@ -15,7 +15,7 @@ extension ApertureCLI.XCResult {
     struct Parse: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
             commandName: "parse",
-            abstract: "Emit xcresult parse metadata for deferred processing"
+            abstract: "Parse the most recent scheme xcresult in DerivedData"
         )
 
         @Option(name: .long, help: "Scheme name used to match xcresult files.")
@@ -29,8 +29,20 @@ extension ApertureCLI.XCResult {
 
         func run() async throws {
             let fileSystem = FileSystem(fileManager: .default)
-            let executor = XCResultMetadataCommandExecutor(
+            let locator = DerivedDataLocator(fileSystem: fileSystem)
+            let resolver = XCResultPathResolver(
                 fileSystem: fileSystem,
+                derivedDataLocator: locator
+            )
+            let commandRunner = SubprocessRunner()
+            let xcresultToolClient = XCResultToolClient(
+                commandRunner: commandRunner,
+                fileSystem: fileSystem
+            )
+            let executor = XCResultParseCommandExecutor(
+                fileSystem: fileSystem,
+                resolver: resolver,
+                xcresultToolClient: xcresultToolClient,
                 output: { line in Swift.print(line) }
             )
 
