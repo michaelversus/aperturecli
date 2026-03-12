@@ -77,7 +77,8 @@ struct InitialSetupWizard {
         let xcodeVersion = try prompter.promptRequiredValue("Xcode version (for example: 16.2)")
         let projectFileName = try promptExistingProjectFileName(relativeTo: repoRootURL)
         let spmPackagesContainerPath = try promptExistingPathValue(
-            "Local SPM packages container path (for example: Packages, leave empty if you don't support Local Packages)",
+            "Local SPM packages container path (for example: Packages, " +
+                "leave empty if you don't support Local Packages)",
             relativeTo: repoRootURL,
             allowEmptyValue: true
         )

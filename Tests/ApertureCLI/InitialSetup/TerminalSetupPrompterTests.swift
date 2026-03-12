@@ -47,20 +47,6 @@ struct TerminalSetupPrompterTests {
         }
     }
 
-    @Test
-    func promptOptionalValueAllowsEmptyInput() async throws {
-        var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
-
-        let stdout = try await withRedirectedStandardStreams(stdin: "\n") {
-            let value = try prompter.promptOptionalValue("Local packages path")
-            #expect(value.isEmpty)
-        }
-
-        #expect(stdout == "Local packages path: ")
-        #expect(messages.isEmpty)
-    }
-
     @Test(arguments: [
         ("y\n", false, true),
         ("No\n", true, false),
@@ -308,6 +294,23 @@ struct TerminalSetupPrompterTests {
 
         #expect(stdout.contains("\rLoading "))
         #expect(stdout.hasSuffix("\r\u{1B}[2K"))
+    }
+}
+
+@Suite(.serialized)
+struct TerminalSetupPrompterOptionalPromptTests {
+    @Test
+    func promptOptionalValueAllowsEmptyInput() async throws {
+        var messages: [String] = []
+        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+
+        let stdout = try await withRedirectedStandardStreams(stdin: "\n") {
+            let value = try prompter.promptOptionalValue("Local packages path")
+            #expect(value.isEmpty)
+        }
+
+        #expect(stdout == "Local packages path: ")
+        #expect(messages.isEmpty)
     }
 }
 
