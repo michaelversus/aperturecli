@@ -11,7 +11,13 @@ final class MockSchemePostActionUpdater: SchemePostActionUpdating {
     private(set) var calls: [Call] = []
 
     func updatePostAction(at schemePath: String, schemeName: String, projectName: String) throws {
-        calls.append(Call(schemePath: schemePath, schemeName: schemeName, projectName: projectName))
+        calls.append(
+            Call(
+                schemePath: schemePath,
+                schemeName: schemeName,
+                projectName: projectName
+            )
+        )
         if let error {
             throw error
         }

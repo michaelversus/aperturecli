@@ -24,6 +24,7 @@ struct InitialSetupWizard {
 
         try confirmConfigReplacementIfNeeded(at: repoRoot)
         let input = try await collectSetupInput(repoRoot: repoRoot, repoRootURL: repoRootURL)
+        try ensureLogArtifactsDirectoryExists(at: input.repoRoot)
         let syncResult = try await prompter.performWithSpinner(
             prefix: "Synchronizing scheme post-actions",
             operation: {
@@ -130,5 +131,17 @@ struct InitialSetupWizard {
             return URL(fileURLWithPath: path, isDirectory: true)
         }
         return rootURL.appendingPathComponent(path, isDirectory: true)
+    }
+
+    private func ensureLogArtifactsDirectoryExists(at repoRoot: String) throws {
+        let logsDirectoryPath = URL(fileURLWithPath: repoRoot, isDirectory: true)
+            .appendingPathComponent("aperture-artifacts", isDirectory: true)
+            .appendingPathComponent("logs", isDirectory: true)
+            .path
+
+        try fileSystem.createDirectory(
+            atPath: logsDirectoryPath,
+            withIntermediateDirectories: true
+        )
     }
 }

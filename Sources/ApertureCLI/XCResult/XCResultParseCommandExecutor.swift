@@ -5,13 +5,13 @@ struct XCResultParseCommandExecutor {
     let resolver: XCResultPathResolving
     let output: (String) -> Void
 
-    func run(schemeName: String, projectName: String) throws {
+    func run(schemeName: String, projectName: String, workspacePath: String? = nil) throws {
         let path = try resolver.resolvePath(
             schemeName: schemeName,
             projectName: projectName
         )
-        let repoRoot = resolveRepoRoot(startingAt: fileSystem.currentDirectoryPath())
-        let artifactsDirectory = URL(fileURLWithPath: repoRoot, isDirectory: true)
+        let resolvedRepoRoot = resolveRepoRoot(workspacePath: workspacePath)
+        let artifactsDirectory = URL(fileURLWithPath: resolvedRepoRoot, isDirectory: true)
             .appendingPathComponent("aperture-artifacts", isDirectory: true)
             .appendingPathComponent("xcresults", isDirectory: true)
         try fileSystem.createDirectory(
@@ -30,6 +30,28 @@ struct XCResultParseCommandExecutor {
         try fileSystem.writeFile(json + "\n", toPath: artifactPath)
 
         output(artifactPath)
+    }
+
+    private func resolveRepoRoot(workspacePath: String?) -> String {
+        if let workspacePath {
+            let trimmed = workspacePath.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                return repoRoot(fromWorkspacePath: trimmed)
+            }
+        }
+
+        return resolveRepoRoot(startingAt: fileSystem.currentDirectoryPath())
+    }
+
+    private func repoRoot(fromWorkspacePath workspacePath: String) -> String {
+        let workspaceURL = URL(fileURLWithPath: workspacePath).standardizedFileURL
+        let workspaceDirectoryURL = workspaceURL.deletingLastPathComponent()
+
+        if workspaceDirectoryURL.pathExtension == "xcodeproj" {
+            return workspaceDirectoryURL.deletingLastPathComponent().path
+        }
+
+        return workspaceDirectoryURL.path
     }
 
     private func resolveRepoRoot(startingAt path: String) -> String {

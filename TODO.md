@@ -9,7 +9,6 @@
 
 ## TODO
 - introduce xcresultkit dependency or implement our own?
-- revert post-action script to use `aperture` instead of `/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI`
 - make local spm packages directory optional
 
 ## In Progress

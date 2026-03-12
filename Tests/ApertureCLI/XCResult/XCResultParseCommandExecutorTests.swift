@@ -35,6 +35,54 @@ struct XCResultParseCommandExecutorTests {
     }
 
     @Test
+    func derivesRepoRootFromWorkspacePathInsideXcodeproj() throws {
+        let fileSystem = MockFileSystem(currentDirectoryPath: "/tmp/random")
+        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
+        var outputLines: [String] = []
+        let executor = XCResultParseCommandExecutor(
+            fileSystem: fileSystem,
+            resolver: resolver,
+            output: { outputLines.append($0) }
+        )
+
+        try executor.run(
+            schemeName: "Snapshots",
+            projectName: "MyApp",
+            workspacePath: "/repo/MyApp.xcodeproj/project.xcworkspace"
+        )
+
+        let mkdir = try #require(fileSystem.createDirectoryOperations.first)
+        #expect(mkdir.path == "/repo/aperture-artifacts/xcresults")
+        let write = try #require(fileSystem.writeOperations.first)
+        #expect(write.path == "/repo/aperture-artifacts/xcresults/Snapshots.json")
+        #expect(outputLines == ["/repo/aperture-artifacts/xcresults/Snapshots.json"])
+    }
+
+    @Test
+    func derivesRepoRootFromWorkspacePath() throws {
+        let fileSystem = MockFileSystem(currentDirectoryPath: "/tmp/random")
+        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
+        var outputLines: [String] = []
+        let executor = XCResultParseCommandExecutor(
+            fileSystem: fileSystem,
+            resolver: resolver,
+            output: { outputLines.append($0) }
+        )
+
+        try executor.run(
+            schemeName: "Snapshots",
+            projectName: "MyApp",
+            workspacePath: "/repo/MyApp.xcworkspace"
+        )
+
+        let mkdir = try #require(fileSystem.createDirectoryOperations.first)
+        #expect(mkdir.path == "/repo/aperture-artifacts/xcresults")
+        let write = try #require(fileSystem.writeOperations.first)
+        #expect(write.path == "/repo/aperture-artifacts/xcresults/Snapshots.json")
+        #expect(outputLines == ["/repo/aperture-artifacts/xcresults/Snapshots.json"])
+    }
+
+    @Test
     func rethrowsResolverError() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(

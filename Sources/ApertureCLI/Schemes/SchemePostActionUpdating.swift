@@ -40,9 +40,19 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
             testAction.addChild(element)
             return element
         }()
+        let environmentBuildableReference = resolveEnvironmentBuildableReference(
+            testAction: testAction,
+            scheme: scheme
+        )
 
         removeExistingManagedActions(from: postActions)
-        postActions.addChild(newManagedExecutionAction(for: schemeName, projectName: projectName))
+        postActions.addChild(
+            newManagedExecutionAction(
+                for: schemeName,
+                projectName: projectName,
+                environmentBuildableReference: environmentBuildableReference
+            )
+        )
 
         let updatedData = xmlDocument.xmlData(options: [.nodePrettyPrint])
         guard let updatedXML = String(data: updatedData, encoding: .utf8) else {
@@ -64,7 +74,11 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
         }
     }
 
-    private func newManagedExecutionAction(for schemeName: String, projectName: String) -> XMLElement {
+    private func newManagedExecutionAction(
+        for schemeName: String,
+        projectName: String,
+        environmentBuildableReference: XMLElement?
+    ) -> XMLElement {
         let executionAction = XMLElement(name: "ExecutionAction")
         addAttribute(named: "ActionType", value: managedSpec.actionType, to: executionAction)
 
@@ -75,9 +89,39 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
             value: managedSpec.scriptText(for: schemeName, projectName: projectName),
             to: actionContent
         )
+        if let environmentBuildableReference {
+            let environmentBuildable = XMLElement(name: "EnvironmentBuildable")
+            environmentBuildable.addChild(environmentBuildableReference)
+            actionContent.addChild(environmentBuildable)
+        }
         executionAction.addChild(actionContent)
 
         return executionAction
+    }
+
+    private func resolveEnvironmentBuildableReference(
+        testAction: XMLElement,
+        scheme: XMLElement
+    ) -> XMLElement? {
+        if let reference = firstBuildableReference(in: testAction) {
+            return reference
+        }
+        return firstBuildableReference(in: scheme)
+    }
+
+    private func firstBuildableReference(in element: XMLElement) -> XMLElement? {
+        guard
+            let references = try? element.nodes(forXPath: ".//BuildableReference"),
+            let reference = references.first as? XMLElement
+        else {
+            return nil
+        }
+
+        return copyXMLElement(reference)
+    }
+
+    private func copyXMLElement(_ element: XMLElement) -> XMLElement? {
+        try? XMLElement(xmlString: element.xmlString(options: []))
     }
 
     private func addAttribute(named name: String, value: String, to element: XMLElement) {

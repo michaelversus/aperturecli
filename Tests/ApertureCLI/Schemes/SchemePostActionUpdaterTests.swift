@@ -18,20 +18,61 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
+        try updater.updatePostAction(
+            at: path,
+            schemeName: "MyScheme",
+            projectName: "MyApp"
+        )
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.path == path)
         #expect(write.contents.contains("<PostActions>"))
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
+        #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(
             write.contents.contains(
-                """
-                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
-                """
+                "--workspace-path &quot;$WORKSPACE_PATH&quot;"
             )
         )
+        #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("2&gt;&amp;1"))
+    }
+
+    @Test
+    func addsEnvironmentBuildableWhenBuildableReferenceExists() throws {
+        let path = "/repo/MyScheme.xcscheme"
+        let fileSystem = MockFileSystem(
+            fileContentsByPath: [
+                path: """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Scheme version = "1.7">
+                  <TestAction buildConfiguration = "Debug">
+                    <MacroExpansion>
+                      <BuildableReference
+                        BuildableIdentifier = "primary"
+                        BlueprintIdentifier = "ABC123"
+                        BuildableName = "MyApp.app"
+                        BlueprintName = "MyApp"
+                        ReferencedContainer = "container:MyApp.xcodeproj">
+                      </BuildableReference>
+                    </MacroExpansion>
+                  </TestAction>
+                </Scheme>
+                """
+            ]
+        )
+        let updater = SchemePostActionUpdater(fileSystem: fileSystem)
+
+        try updater.updatePostAction(
+            at: path,
+            schemeName: "MyScheme",
+            projectName: "MyApp"
+        )
+
+        let write = try #require(fileSystem.writeOperations.first)
+        #expect(write.contents.contains("<EnvironmentBuildable>"))
+        #expect(write.contents.contains("BlueprintIdentifier=\"ABC123\""))
+        #expect(write.contents.contains("ReferencedContainer=\"container:MyApp.xcodeproj\""))
     }
 
     @Test
@@ -62,17 +103,21 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
+        try updater.updatePostAction(
+            at: path,
+            schemeName: "MyScheme",
+            projectName: "MyApp"
+        )
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.contents.contains("title=\"User Action\""))
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
+        #expect(write.contents.contains("WORKSPACE_PATH"))
+        #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(
             write.contents.contains(
-                """
-                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
-                """
+                "--workspace-path &quot;$WORKSPACE_PATH&quot;"
             )
         )
         #expect(write.contents.contains("scriptText=\"echo old") == false)
@@ -94,7 +139,11 @@ struct SchemePostActionUpdaterTests {
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         #expect(throws: SchemePostActionUpdaterError.missingTestAction(path: path)) {
-            try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
+            try updater.updatePostAction(
+                at: path,
+                schemeName: "MyScheme",
+                projectName: "MyApp"
+            )
         }
     }
 
@@ -124,17 +173,21 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
+        try updater.updatePostAction(
+            at: path,
+            schemeName: "MyScheme",
+            projectName: "MyApp"
+        )
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
-        #expect(write.contents.contains("scriptText=\"aperture xcresult parse") == false)
+        #expect(write.contents.contains("--project-name &quot;$PROJECT_NAME&quot;") == false)
+        #expect(write.contents.contains("WORKSPACE_PATH"))
+        #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(
             write.contents.contains(
-                """
-                scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
-                """
+                "--workspace-path &quot;$WORKSPACE_PATH&quot;"
             )
         )
     }

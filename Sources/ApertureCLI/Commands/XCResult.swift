@@ -24,6 +24,9 @@ extension ApertureCLI.XCResult {
         @Option(name: .long, help: "Xcode project name (without .xcodeproj).")
         var projectName: String
 
+        @Option(name: .long, help: "Workspace path used to derive repo root for artifacts.")
+        var workspacePath: String?
+
         func run() async throws {
             let fileSystem = FileSystem(fileManager: .default)
             let locator = DerivedDataLocator(fileSystem: fileSystem)
@@ -37,7 +40,11 @@ extension ApertureCLI.XCResult {
                 output: { line in Swift.print(line) }
             )
 
-            try executor.run(schemeName: scheme, projectName: projectName)
+            try executor.run(
+                schemeName: scheme,
+                projectName: projectName,
+                workspacePath: workspacePath
+            )
         }
     }
 }

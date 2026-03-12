@@ -74,6 +74,11 @@ struct InitialSetupWizardTests {
         #expect(discoverer.callCount == 1)
         #expect(synchronizer.callCount == 1)
         #expect(configWriter.writeCallCount == 1)
+        #expect(
+            fileSystem.createDirectoryOperations.contains {
+                $0.path == "/repo/aperture-artifacts/logs" && $0.withIntermediateDirectories
+            }
+        )
     }
 
     @Test
@@ -297,4 +302,9 @@ private func assertNormalizedSetupResult(_ context: NormalizedSetupContext) thro
     )
     #expect(context.prompter.messages.contains("Saved configuration to /repo/.aperture.json"))
     #expect(context.fileSystem.fileExistsCalls.contains("/repo/MyApp.xcodeproj"))
+    #expect(
+        context.fileSystem.createDirectoryOperations.contains {
+            $0.path == "/repo/aperture-artifacts/logs" && $0.withIntermediateDirectories
+        }
+    )
 }
