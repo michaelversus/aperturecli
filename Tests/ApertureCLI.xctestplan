@@ -1,0 +1,38 @@
+{
+  "configurations" : [
+    {
+      "id" : "FE37B534-B07F-4127-89B6-28568AB1326F",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:",
+          "identifier" : "ApertureCLITests",
+          "name" : "ApertureCLITests"
+        }
+      ]
+    },
+    "performanceAntipatternCheckerEnabled" : true,
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:",
+      "identifier" : "ApertureCLI",
+      "name" : "ApertureCLI"
+    }
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "ApertureCLITests",
+        "name" : "ApertureCLITests"
+      }
+    }
+  ],
+  "version" : 1
+}
