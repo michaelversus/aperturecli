@@ -3,16 +3,18 @@
 ## Backlog
 - introduce lessons.md
 - parse xcresult files
+- Generate assertions for the app using the configuration properties
 - create .aperture directory to store data parsed
 
 # Current Sprint
 
 ## TODO
 - remove debug command for Test post Actions
-- introduce xcresultkit dependency or implement our own?
+- make local spm packages directory optional
+
 
 ## In Progress
-- make local spm packages directory optional
+- implement custom xcresult parsing
 
 ## Done
 - init command under the user pwd wire things up

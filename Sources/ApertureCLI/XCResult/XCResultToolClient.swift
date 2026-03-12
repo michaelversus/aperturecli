@@ -9,7 +9,10 @@ struct XCResultToolClient: XCResultToolProviding {
             "xcresulttool", "get", "test-results", "summary",
             "--path", xcresultPath
         ]
-        let output = try commandRunner.run(executable: "/usr/bin/xcrun", arguments: arguments)
+        let output = try runCommandWithRetry(
+            executable: "/usr/bin/xcrun",
+            arguments: arguments
+        )
         return try decode(
             XCResultToolModels.Summary.self,
             from: output,
@@ -89,5 +92,34 @@ struct XCResultToolClient: XCResultToolProviding {
                 underlying: error.localizedDescription
             )
         }
+    }
+
+    private func runCommandWithRetry(executable: String, arguments: [String]) throws -> String {
+        let maxAttempts = 4
+        var attempt = 0
+        var delaySeconds = 0.25
+
+        while true {
+            attempt += 1
+            do {
+                return try commandRunner.run(executable: executable, arguments: arguments)
+            } catch {
+                guard attempt < maxAttempts, isTransientXCResultReadinessError(error) else {
+                    throw error
+                }
+                Thread.sleep(forTimeInterval: delaySeconds)
+                delaySeconds *= 2
+            }
+        }
+    }
+
+    private func isTransientXCResultReadinessError(_ error: Error) -> Bool {
+        guard case let SubprocessRunnerError.commandFailed(_, _, _, output) = error else {
+            return false
+        }
+        let normalizedOutput = output.lowercased()
+        return normalizedOutput.contains("info.plist")
+            && normalizedOutput.contains("does not exist")
+            && normalizedOutput.contains("result bundle")
     }
 }
