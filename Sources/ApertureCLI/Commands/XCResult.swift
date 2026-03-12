@@ -39,10 +39,18 @@ extension ApertureCLI.XCResult {
                 commandRunner: commandRunner,
                 fileSystem: fileSystem
             )
+            let appBridge = AppBridge(
+                appRunningChecker: RunningApplicationChecker(),
+                appLauncher: OpenCommandAppLauncher(commandRunner: commandRunner),
+                userPrompter: TerminalUserConfirmationPrompter(output: { line in Swift.print(line) }),
+                notificationPoster: DistributedNotificationPoster(),
+                output: { line in Swift.print(line) }
+            )
             let executor = XCResultParseCommandExecutor(
                 fileSystem: fileSystem,
                 resolver: resolver,
                 xcresultToolClient: xcresultToolClient,
+                appBridge: appBridge,
                 output: { line in Swift.print(line) }
             )
 

@@ -52,6 +52,33 @@ struct XCResultParseCommandExecutorSuccessTests {
     }
 
     @Test
+    func sendsAppNotificationPayloadAfterArtifactWrite() throws {
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo/App/Subdir",
+            existingPaths: ["/repo/.git"]
+        )
+        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
+        let xcresultToolClient = makeSuccessfulClient()
+        let appBridge = MockAppBridge()
+
+        let executor = XCResultParseCommandExecutor(
+            fileSystem: fileSystem,
+            resolver: resolver,
+            xcresultToolClient: xcresultToolClient,
+            appBridge: appBridge,
+            output: { _ in }
+        )
+
+        try executor.run(schemeName: "Snapshots", projectName: "MyApp")
+
+        let payload = try #require(appBridge.payloads.first)
+        #expect(payload.schemeName == "Snapshots")
+        #expect(payload.projectName == "MyApp")
+        #expect(payload.artifactPath == "/repo/aperture-artifacts/xcresults/Snapshots.json")
+        #expect(payload.xcresultPath == "/tmp/result.xcresult")
+    }
+
+    @Test
     func skipsPerTestParsingWhenThereAreNoFailures() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/tmp/random")
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
@@ -228,6 +255,14 @@ private func decodeSummary(_ json: String) throws -> XCResultToolModels.Summary 
         throw CocoaError(.fileReadInapplicableStringEncoding)
     }
     return try JSONDecoder().decode(XCResultToolModels.Summary.self, from: data)
+}
+
+private final class MockAppBridge: AppBridgeHandling {
+    private(set) var payloads: [AppNotificationPayload] = []
+
+    func notifyAppIfNeeded(payload: AppNotificationPayload) {
+        payloads.append(payload)
+    }
 }
 
 private let singleFailureSummaryWithMetadataJSON = """

@@ -9,7 +9,22 @@ struct XCResultParseCommandExecutor {
     let fileSystem: FileSystemProvider
     let resolver: XCResultPathResolving
     let xcresultToolClient: XCResultToolProviding
+    let appBridge: AppBridgeHandling
     let output: (String) -> Void
+
+    init(
+        fileSystem: FileSystemProvider,
+        resolver: XCResultPathResolving,
+        xcresultToolClient: XCResultToolProviding,
+        appBridge: AppBridgeHandling = NoopAppBridge(),
+        output: @escaping (String) -> Void
+    ) {
+        self.fileSystem = fileSystem
+        self.resolver = resolver
+        self.xcresultToolClient = xcresultToolClient
+        self.appBridge = appBridge
+        self.output = output
+    }
 
     func run(schemeName: String, projectName: String, workspacePath: String? = nil) throws {
         let xcresultPath = try resolver.resolvePath(schemeName: schemeName, projectName: projectName)
@@ -51,6 +66,15 @@ struct XCResultParseCommandExecutor {
 
         try fileSystem.writeFile(json + "\n", toPath: directories.artifactPath)
         output(directories.artifactPath)
+
+        appBridge.notifyAppIfNeeded(
+            payload: AppNotificationPayload(
+                schemeName: schemeName,
+                projectName: projectName,
+                artifactPath: directories.artifactPath,
+                xcresultPath: xcresultPath
+            )
+        )
     }
 
     func resolveRepoRoot(workspacePath: String?) -> String {

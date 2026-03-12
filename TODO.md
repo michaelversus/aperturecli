@@ -2,9 +2,11 @@
 
 ## Backlog
 - introduce lessons.md
-- parse xcresult files
 - Generate assertions for the app using the configuration properties
-- create .aperture directory to store data parsed
+- How we should manage recurring test executions? Keep artifacts for all? 
+Maybe clean assets and keep only those of the last failure? We might want to clean up artifacts after every test execution.
+- init command maybe should ask to edit gitignore for the user to exclude aperture-artifacts
+
 
 # Current Sprint
 
@@ -12,6 +14,7 @@
 - remove debug command for Test post Actions
 
 ## In Progress
+- post notification after every xcresult parse command finishes. Check if notification can pass the files the Aperture Studio app needs to check.
 
 ## Done
 - init command under the user pwd wire things up
@@ -25,3 +28,4 @@
 - implement custom xcresult parsing
 - make local spm packages directory optional
 - empty selection for schemes should mean no test post actions setup
+- create aperture-artifacts directory to store data parsed
