@@ -23,14 +23,8 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
 
     func updatePostAction(at schemePath: String, schemeName: String, projectName: String) throws {
         let xmlString = try fileSystem.readFile(atPath: schemePath)
-        guard let data = xmlString.data(using: .utf8) else {
-            throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
-        }
-
-        let xmlDocument = try XMLDocument(data: data, options: [.nodePreserveAll])
-        guard let scheme = xmlDocument.rootElement() else {
-            throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
-        }
+        let xmlDocument = try parseXMLDocument(from: xmlString, schemePath: schemePath)
+        let scheme = try schemeRoot(in: xmlDocument, schemePath: schemePath)
         guard let testAction = scheme.elements(forName: "TestAction").first else {
             throw SchemePostActionUpdaterError.missingTestAction(path: schemePath)
         }
@@ -54,10 +48,7 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
             )
         )
 
-        let updatedData = xmlDocument.xmlData(options: [.nodePrettyPrint])
-        guard let updatedXML = String(data: updatedData, encoding: .utf8) else {
-            throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
-        }
+        let updatedXML = xmlDocument.xmlString(options: [.nodePrettyPrint])
         try fileSystem.writeFile(updatedXML, toPath: schemePath)
     }
 
@@ -129,5 +120,20 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
             return
         }
         element.addAttribute(attribute)
+    }
+
+    func parseXMLDocument(from xmlString: String, schemePath: String) throws -> XMLDocument {
+        do {
+            return try XMLDocument(data: Data(xmlString.utf8), options: [.nodePreserveAll])
+        } catch {
+            throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
+        }
+    }
+
+    func schemeRoot(in xmlDocument: XMLDocument, schemePath: String) throws -> XMLElement {
+        guard let scheme = xmlDocument.rootElement() else {
+            throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
+        }
+        return scheme
     }
 }

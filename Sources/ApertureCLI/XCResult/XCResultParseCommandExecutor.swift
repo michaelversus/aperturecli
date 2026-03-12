@@ -24,9 +24,7 @@ struct XCResultParseCommandExecutor {
             .path
         let payload = [schemeName: path]
         let data = try JSONEncoder.prettySorted.encode(payload)
-        guard let json = String(data: data, encoding: .utf8) else {
-            throw CocoaError(.fileWriteInapplicableStringEncoding)
-        }
+        let json = String(decoding: data, as: UTF8.self)
         try fileSystem.writeFile(json + "\n", toPath: artifactPath)
 
         output(artifactPath)

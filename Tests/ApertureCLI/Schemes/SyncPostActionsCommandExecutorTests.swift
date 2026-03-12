@@ -20,7 +20,7 @@ struct SyncPostActionsCommandExecutorTests {
             result: SchemePostActionSyncResult(
                 matchedSchemeNames: ["Snapshots"],
                 updatedSchemeFilePaths: ["/repo/MyApp.xcodeproj/xcshareddata/xcschemes/Snapshots.xcscheme"],
-                missingSelectedSchemeNames: []
+                missingSelectedSchemeNames: ["Missing"]
             )
         )
         var outputLines: [String] = []
@@ -43,9 +43,11 @@ struct SyncPostActionsCommandExecutorTests {
         #expect(synchronizer.receivedSelectedSchemeNames == ["Snapshots"])
         #expect(outputLines.contains("Matched schemes: 1"))
         #expect(outputLines.contains("Updated scheme files: 1"))
+        #expect(outputLines.contains("Missing selected schemes: 1"))
         #expect(outputLines.contains("Updated scheme file paths:"))
         #expect(
             outputLines.contains(" - /repo/MyApp.xcodeproj/xcshareddata/xcschemes/Snapshots.xcscheme")
         )
+        #expect(outputLines.contains("Skipped missing schemes: Missing"))
     }
 }

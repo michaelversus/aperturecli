@@ -26,6 +26,18 @@ ApertureCLI reads metadata when the user executes snapshot tests and communicate
 
 ## Best Practices
 
+#### Swift:
+Instead of
+```swift
+"foo".data(using: .utf8) // Data?
+String(data: data, encoding: .utf8) // String?
+```
+Use
+```swift
+Data("foo".utf8) // Data
+String(decoding: data, as: UTF8.self) // String
+```
+
 #### DO:
 - Use property wrappers as intended by Apple
 - Test logic in isolation

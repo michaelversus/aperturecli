@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import ApertureCLI
 
@@ -144,6 +145,42 @@ struct SchemePostActionUpdaterTests {
                 schemeName: "MyScheme",
                 projectName: "MyApp"
             )
+        }
+        #expect(fileSystem.writeOperations.isEmpty)
+    }
+
+    @Test
+    func throwsWhenSchemeXMLIsMalformed() throws {
+        let path = "/repo/MyScheme.xcscheme"
+        let fileSystem = MockFileSystem(
+            fileContentsByPath: [
+                path: """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <Scheme version = "1.7">
+                  <TestAction buildConfiguration = "Debug">
+                </Scheme>
+                """
+            ]
+        )
+        let updater = SchemePostActionUpdater(fileSystem: fileSystem)
+
+        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: path)) {
+            try updater.updatePostAction(
+                at: path,
+                schemeName: "MyScheme",
+                projectName: "MyApp"
+            )
+        }
+    }
+
+    @Test
+    func throwsWhenParsedDocumentHasNoRootElement() throws {
+        let path = "/repo/MyScheme.xcscheme"
+        let updater = SchemePostActionUpdater(fileSystem: MockFileSystem())
+        let xmlDocument = XMLDocument(kind: .document, options: .nodePreserveAll)
+
+        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: path)) {
+            _ = try updater.schemeRoot(in: xmlDocument, schemePath: path)
         }
     }
 
