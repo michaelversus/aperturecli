@@ -47,7 +47,7 @@ struct InitialSetupWizardTests {
                 "MyApp",
                 "Packages"
             ],
-            confirmations: [true],
+            confirmations: [true, true],
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
@@ -107,6 +107,7 @@ struct InitialSetupWizardTests {
                 "MyApp.xcodeproj",
                 "Packages"
             ],
+            confirmations: [true],
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
@@ -146,6 +147,7 @@ struct InitialSetupWizardTests {
                 projectPath,
                 packagesPath
             ],
+            confirmations: [true],
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
@@ -188,6 +190,7 @@ struct InitialSetupWizardTests {
                 "MyApp",
                 ""
             ],
+            confirmations: [true],
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
@@ -228,6 +231,7 @@ struct InitialSetupWizardTests {
                 "MyApp",
                 "Packages"
             ],
+            confirmations: [true],
             selectedSchemes: ["Snapshots"]
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
@@ -279,6 +283,7 @@ private func makeNormalizedSetupContext() -> NormalizedSetupContext {
             "MissingPackages",
             "Packages"
         ],
+        confirmations: [true],
         selectedSchemes: ["Snapshots"]
     )
     let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])

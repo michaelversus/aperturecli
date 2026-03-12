@@ -20,6 +20,7 @@ struct InitialSetupWizardEmptySchemesTests {
                 "MyApp",
                 "Packages"
             ],
+            confirmations: [true],
             selectedSchemes: []
         )
         let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])

@@ -13,6 +13,7 @@ struct InitialCompositionRootTests {
         )
         let prompter = MockPrompter(
             requiredValues: ["18.2", "iPhone 16 Pro", "16.2", "MyApp", "Packages"],
+            confirmations: [true],
             selectedSchemes: ["FeatureSnapshots"]
         )
         let schemeDiscoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["FeatureSnapshots"])

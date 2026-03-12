@@ -56,6 +56,7 @@ struct InitialSetupWizard {
         )
 
         try configWriter.write(config, at: input.repoRoot)
+        try updateGitignoreIfNeeded(at: input.repoRoot)
         prompter.writeMessage("Saved configuration to \(input.repoRoot)/.aperture.json")
     }
 
@@ -160,5 +161,47 @@ struct InitialSetupWizard {
             atPath: logsDirectoryPath,
             withIntermediateDirectories: true
         )
+    }
+
+    private func updateGitignoreIfNeeded(at repoRoot: String) throws {
+        let shouldUpdateGitignore = try prompter.promptConfirmation(
+            "Add aperture-artifacts/ to .gitignore?",
+            defaultValue: true
+        )
+        guard shouldUpdateGitignore else {
+            prompter.writeMessage("Skipped .gitignore update.")
+            return
+        }
+
+        let gitignorePath = URL(fileURLWithPath: repoRoot, isDirectory: true)
+            .appendingPathComponent(".gitignore", isDirectory: false)
+            .path
+        let existingContents = fileSystem.fileExists(atPath: gitignorePath)
+            ? try fileSystem.readFile(atPath: gitignorePath)
+            : ""
+
+        if gitignoreContainsApertureArtifacts(existingContents) {
+            prompter.writeMessage("Aperture artifacts are already ignored in \(gitignorePath)")
+            return
+        }
+
+        try fileSystem.writeFile(appendedGitignoreContents(existingContents), toPath: gitignorePath)
+        prompter.writeMessage("Updated \(gitignorePath) to ignore aperture-artifacts/")
+    }
+
+    private func gitignoreContainsApertureArtifacts(_ contents: String) -> Bool {
+        contents
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .contains("aperture-artifacts/")
+    }
+
+    private func appendedGitignoreContents(_ existingContents: String) -> String {
+        guard !existingContents.isEmpty else {
+            return "aperture-artifacts/\n"
+        }
+
+        let separator = existingContents.hasSuffix("\n") ? "" : "\n"
+        return existingContents + separator + "aperture-artifacts/\n"
     }
 }
