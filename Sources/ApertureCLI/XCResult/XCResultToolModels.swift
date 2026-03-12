@@ -1,5 +1,20 @@
 import Foundation
 
+private enum XCResultSummaryCodingKeys: String, CodingKey {
+    case title
+    case startTime
+    case finishTime
+    case environmentDescription
+    case result
+    case totalTestCount
+    case passedTests
+    case failedTests
+    case skippedTests
+    case expectedFailures
+    case devicesAndConfigurations
+    case testFailures
+}
+
 enum XCResultToolModels {
     struct Summary: Decodable {
         let title: String?
@@ -15,27 +30,15 @@ enum XCResultToolModels {
         let devicesAndConfigurations: [DeviceAndConfiguration]
         let testFailures: [TestFailure]
 
-        private enum CodingKeys: String, CodingKey {
-            case title
-            case startTime
-            case finishTime
-            case environmentDescription
-            case result
-            case totalTestCount
-            case passedTests
-            case failedTests
-            case skippedTests
-            case expectedFailures
-            case devicesAndConfigurations
-            case testFailures
-        }
-
         init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let container = try decoder.container(keyedBy: XCResultSummaryCodingKeys.self)
             title = try container.decodeIfPresent(String.self, forKey: .title)
             startTime = try container.decodeIfPresent(Double.self, forKey: .startTime)
             finishTime = try container.decodeIfPresent(Double.self, forKey: .finishTime)
-            environmentDescription = try container.decodeIfPresent(String.self, forKey: .environmentDescription)
+            environmentDescription = try container.decodeIfPresent(
+                String.self,
+                forKey: .environmentDescription
+            )
             result = try container.decodeIfPresent(String.self, forKey: .result) ?? "unknown"
             totalTestCount = try container.decodeIfPresent(Int.self, forKey: .totalTestCount) ?? 0
             passedTests = try container.decodeIfPresent(Int.self, forKey: .passedTests) ?? 0
@@ -140,4 +143,3 @@ enum XCResultToolModels {
         let arguments: [Int]?
     }
 }
-

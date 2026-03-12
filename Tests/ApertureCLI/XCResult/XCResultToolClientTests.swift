@@ -72,7 +72,7 @@ struct XCResultToolClientTests {
                 == [
                     "xcresulttool", "get", "test-results", "test-details",
                     "--path", "/tmp/run.xcresult",
-                    "--test-id", "Suite/testName",
+                    "--test-id", "Suite/testName"
                 ]
         )
         #expect(
@@ -80,7 +80,7 @@ struct XCResultToolClientTests {
                 == [
                     "xcresulttool", "get", "test-results", "activities",
                     "--path", "/tmp/run.xcresult",
-                    "--test-id", "Suite/testName",
+                    "--test-id", "Suite/testName"
                 ]
         )
     }
@@ -136,7 +136,7 @@ struct XCResultToolClientTests {
                     "xcresulttool", "export", "attachments",
                     "--path", "/tmp/run.xcresult",
                     "--test-id", "Suite/testName",
-                    "--output-path", outputPath,
+                    "--output-path", outputPath
                 ]
         )
     }
@@ -156,4 +156,3 @@ struct XCResultToolClientTests {
         }
     }
 }
-

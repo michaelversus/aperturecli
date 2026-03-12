@@ -13,4 +13,3 @@ enum XCResultToolClientError: LocalizedError, Equatable {
         }
     }
 }
-

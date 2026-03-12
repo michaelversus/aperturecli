@@ -16,4 +16,3 @@ protocol XCResultToolProviding {
         outputPath: String
     ) throws -> [XCResultToolModels.ExportedAttachmentManifestEntry]
 }
-

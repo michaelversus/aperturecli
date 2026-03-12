@@ -91,4 +91,3 @@ struct XCResultToolClient: XCResultToolProviding {
         }
     }
 }
-

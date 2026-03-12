@@ -22,4 +22,3 @@ final class MockCommandRunner: CommandRunning {
         return try queuedResults.removeFirst().get()
     }
 }
-

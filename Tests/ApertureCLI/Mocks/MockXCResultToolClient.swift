@@ -2,15 +2,26 @@ import Foundation
 @testable import ApertureCLI
 
 final class MockXCResultToolClient: XCResultToolProviding {
+    struct TestInvocation: Equatable {
+        let xcresultPath: String
+        let testIdentifier: String
+    }
+
+    struct ExportInvocation: Equatable {
+        let xcresultPath: String
+        let testIdentifier: String
+        let outputPath: String
+    }
+
     typealias SummaryHandler = (String) throws -> XCResultToolModels.Summary
     typealias TestHandler = (String, String) throws -> XCResultToolModels.TestDetails
     typealias ActivitiesHandler = (String, String) throws -> XCResultToolModels.TestActivities
     typealias ExportHandler = (String, String, String) throws -> [XCResultToolModels.ExportedAttachmentManifestEntry]
 
     private(set) var fetchSummaryCalls: [String] = []
-    private(set) var fetchTestDetailsCalls: [(xcresultPath: String, testIdentifier: String)] = []
-    private(set) var fetchTestActivitiesCalls: [(xcresultPath: String, testIdentifier: String)] = []
-    private(set) var exportAttachmentsCalls: [(xcresultPath: String, testIdentifier: String, outputPath: String)] = []
+    private(set) var fetchTestDetailsCalls: [TestInvocation] = []
+    private(set) var fetchTestActivitiesCalls: [TestInvocation] = []
+    private(set) var exportAttachmentsCalls: [ExportInvocation] = []
 
     var summaryHandler: SummaryHandler
     var testDetailsHandler: TestHandler
@@ -58,7 +69,9 @@ final class MockXCResultToolClient: XCResultToolProviding {
         xcresultPath: String,
         testIdentifier: String
     ) throws -> XCResultToolModels.TestDetails {
-        fetchTestDetailsCalls.append((xcresultPath, testIdentifier))
+        fetchTestDetailsCalls.append(
+            TestInvocation(xcresultPath: xcresultPath, testIdentifier: testIdentifier)
+        )
         return try testDetailsHandler(xcresultPath, testIdentifier)
     }
 
@@ -66,7 +79,9 @@ final class MockXCResultToolClient: XCResultToolProviding {
         xcresultPath: String,
         testIdentifier: String
     ) throws -> XCResultToolModels.TestActivities {
-        fetchTestActivitiesCalls.append((xcresultPath, testIdentifier))
+        fetchTestActivitiesCalls.append(
+            TestInvocation(xcresultPath: xcresultPath, testIdentifier: testIdentifier)
+        )
         return try testActivitiesHandler(xcresultPath, testIdentifier)
     }
 
@@ -75,8 +90,13 @@ final class MockXCResultToolClient: XCResultToolProviding {
         testIdentifier: String,
         outputPath: String
     ) throws -> [XCResultToolModels.ExportedAttachmentManifestEntry] {
-        exportAttachmentsCalls.append((xcresultPath, testIdentifier, outputPath))
+        exportAttachmentsCalls.append(
+            ExportInvocation(
+                xcresultPath: xcresultPath,
+                testIdentifier: testIdentifier,
+                outputPath: outputPath
+            )
+        )
         return try exportHandler(xcresultPath, testIdentifier, outputPath)
     }
 }
-
