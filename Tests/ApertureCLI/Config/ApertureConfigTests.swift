@@ -38,6 +38,7 @@ struct ApertureConfigTests {
 
         #expect(decoded.repoRoot == config.repoRoot)
         #expect(decoded.projectFileName == config.projectFileName)
+        #expect(decoded.projectName == "MyApp")
         #expect(decoded.spmPackagesContainerPath == config.spmPackagesContainerPath)
         #expect(decoded.snapshotTestSchemes == config.snapshotTestSchemes)
     }

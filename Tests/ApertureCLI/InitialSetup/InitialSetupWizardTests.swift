@@ -278,6 +278,7 @@ private func assertNormalizedSetupResult(_ context: NormalizedSetupContext) thro
     #expect(context.discoverer.receivedProjectFileName == "MyApp.xcodeproj")
     #expect(context.discoverer.receivedSPMPackagesPath == "Packages")
     #expect(context.synchronizer.receivedProjectFileName == "MyApp.xcodeproj")
+    #expect(context.synchronizer.receivedProjectName == "MyApp")
     #expect(context.synchronizer.receivedSPMPackagesPath == "Packages")
     #expect(context.synchronizer.receivedSelectedSchemeNames == ["Snapshots"])
     #expect(

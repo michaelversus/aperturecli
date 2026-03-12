@@ -32,6 +32,7 @@ struct SchemePostActionSynchronizerTests {
         let result = try synchronizer.syncPostActions(
             repoRoot: "/repo",
             projectFileName: "MyApp.xcodeproj",
+            projectName: "MyApp",
             spmPackagesContainerPath: "Packages",
             selectedSchemeNames: ["Snapshots", "Missing"]
         )
@@ -39,6 +40,7 @@ struct SchemePostActionSynchronizerTests {
         #expect(discoverer.locateCallCount == 1)
         #expect(updater.calls.count == 2)
         #expect(updater.calls.map(\.schemeName) == ["Snapshots", "Snapshots"])
+        #expect(updater.calls.map(\.projectName) == ["MyApp", "MyApp"])
         #expect(result.matchedSchemeNames == ["Snapshots"])
         #expect(result.updatedSchemeFileCount == 2)
         #expect(result.missingSelectedSchemeNames == ["Missing"])

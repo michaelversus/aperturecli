@@ -30,6 +30,7 @@ struct InitialSetupWizard {
                 try schemePostActionSynchronizer.syncPostActions(
                     repoRoot: input.repoRoot,
                     projectFileName: input.projectFileName,
+                    projectName: URL(fileURLWithPath: input.projectFileName).deletingPathExtension().lastPathComponent,
                     spmPackagesContainerPath: input.spmPackagesContainerPath,
                     selectedSchemeNames: input.snapshotTestSchemes
                 )

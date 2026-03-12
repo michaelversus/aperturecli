@@ -4,6 +4,7 @@ protocol SchemePostActionSynchronizing {
     func syncPostActions(
         repoRoot: String,
         projectFileName: String,
+        projectName: String,
         spmPackagesContainerPath: String,
         selectedSchemeNames: [String]
     ) throws -> SchemePostActionSyncResult
@@ -16,6 +17,7 @@ struct SchemePostActionSynchronizer: SchemePostActionSynchronizing {
     func syncPostActions(
         repoRoot: String,
         projectFileName: String,
+        projectName: String,
         spmPackagesContainerPath: String,
         selectedSchemeNames: [String]
     ) throws -> SchemePostActionSyncResult {
@@ -31,7 +33,8 @@ struct SchemePostActionSynchronizer: SchemePostActionSynchronizing {
         for reference in matchedReferences {
             try schemeUpdater.updatePostAction(
                 at: reference.path,
-                schemeName: reference.name
+                schemeName: reference.name,
+                projectName: projectName
             )
         }
 

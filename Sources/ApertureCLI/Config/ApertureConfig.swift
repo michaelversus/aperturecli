@@ -50,4 +50,8 @@ struct ApertureConfig: Codable, Sendable {
         ) ?? "Packages"
         snapshotTestSchemes = try container.decodeIfPresent([String].self, forKey: .snapshotTestSchemes) ?? []
     }
+
+    var projectName: String {
+        URL(fileURLWithPath: projectFileName).deletingPathExtension().lastPathComponent
+    }
 }

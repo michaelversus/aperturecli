@@ -12,6 +12,7 @@ struct SyncPostActionsCommandExecutor {
         let result = try synchronizer.syncPostActions(
             repoRoot: config.repoRoot,
             projectFileName: config.projectFileName,
+            projectName: config.projectName,
             spmPackagesContainerPath: config.spmPackagesContainerPath,
             selectedSchemeNames: config.snapshotTestSchemes
         )

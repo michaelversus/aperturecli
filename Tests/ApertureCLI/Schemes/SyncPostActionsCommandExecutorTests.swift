@@ -38,6 +38,7 @@ struct SyncPostActionsCommandExecutorTests {
         #expect(synchronizer.callCount == 1)
         #expect(synchronizer.receivedRepoRoot == "/repo")
         #expect(synchronizer.receivedProjectFileName == "MyApp.xcodeproj")
+        #expect(synchronizer.receivedProjectName == "MyApp")
         #expect(synchronizer.receivedSPMPackagesPath == "Packages")
         #expect(synchronizer.receivedSelectedSchemeNames == ["Snapshots"])
         #expect(outputLines.contains("Matched schemes: 1"))

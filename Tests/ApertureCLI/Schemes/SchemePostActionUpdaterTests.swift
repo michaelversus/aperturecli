@@ -18,7 +18,7 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme")
+        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.path == path)
@@ -28,7 +28,7 @@ struct SchemePostActionUpdaterTests {
             write.contents.contains(
                 """
                 scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
                 """
             )
         )
@@ -62,7 +62,7 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme")
+        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.contents.contains("title=\"User Action\""))
@@ -71,7 +71,7 @@ struct SchemePostActionUpdaterTests {
             write.contents.contains(
                 """
                 scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
                 """
             )
         )
@@ -94,7 +94,7 @@ struct SchemePostActionUpdaterTests {
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         #expect(throws: SchemePostActionUpdaterError.missingTestAction(path: path)) {
-            try updater.updatePostAction(at: path, schemeName: "MyScheme")
+            try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
         }
     }
 
@@ -124,7 +124,7 @@ struct SchemePostActionUpdaterTests {
         )
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        try updater.updatePostAction(at: path, schemeName: "MyScheme")
+        try updater.updatePostAction(at: path, schemeName: "MyScheme", projectName: "MyApp")
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
@@ -133,7 +133,7 @@ struct SchemePostActionUpdaterTests {
             write.contents.contains(
                 """
                 scriptText="/Users/m.karagiorgos/aperturecli/.build/debug/ApertureCLI xcresult parse \
-                --scheme &quot;MyScheme&quot; --project-name &quot;$PROJECT_NAME&quot;
+                --scheme &quot;MyScheme&quot; --project-name &quot;MyApp&quot;
                 """
             )
         )

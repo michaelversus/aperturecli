@@ -1,7 +1,7 @@
 import Foundation
 
 protocol SchemePostActionUpdating {
-    func updatePostAction(at schemePath: String, schemeName: String) throws
+    func updatePostAction(at schemePath: String, schemeName: String, projectName: String) throws
 }
 
 enum SchemePostActionUpdaterError: Error, Equatable {
@@ -21,7 +21,7 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
         self.managedSpec = managedSpec
     }
 
-    func updatePostAction(at schemePath: String, schemeName: String) throws {
+    func updatePostAction(at schemePath: String, schemeName: String, projectName: String) throws {
         let xmlString = try fileSystem.readFile(atPath: schemePath)
         guard let data = xmlString.data(using: .utf8) else {
             throw SchemePostActionUpdaterError.invalidXML(path: schemePath)
@@ -42,7 +42,7 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
         }()
 
         removeExistingManagedActions(from: postActions)
-        postActions.addChild(newManagedExecutionAction(for: schemeName))
+        postActions.addChild(newManagedExecutionAction(for: schemeName, projectName: projectName))
 
         let updatedData = xmlDocument.xmlData(options: [.nodePrettyPrint])
         guard let updatedXML = String(data: updatedData, encoding: .utf8) else {
@@ -64,7 +64,7 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
         }
     }
 
-    private func newManagedExecutionAction(for schemeName: String) -> XMLElement {
+    private func newManagedExecutionAction(for schemeName: String, projectName: String) -> XMLElement {
         let executionAction = XMLElement(name: "ExecutionAction")
         addAttribute(named: "ActionType", value: managedSpec.actionType, to: executionAction)
 
@@ -72,7 +72,7 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
         addAttribute(named: "title", value: managedSpec.title, to: actionContent)
         addAttribute(
             named: "scriptText",
-            value: managedSpec.scriptText(for: schemeName),
+            value: managedSpec.scriptText(for: schemeName, projectName: projectName),
             to: actionContent
         )
         executionAction.addChild(actionContent)
