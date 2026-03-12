@@ -57,6 +57,10 @@ protocol FileSystemProvider {
     ///   - path: A file path (absolute or relative).
     func writeFile(_ contents: String, toPath path: String) throws
 
+    /// Removes a file system item at the given path.
+    /// - Parameter path: A file or directory path (absolute or relative).
+    func removeItem(atPath path: String) throws
+
     /// Creates a directory at the given path.
     /// - Parameters:
     ///   - path: A directory path (absolute or relative).

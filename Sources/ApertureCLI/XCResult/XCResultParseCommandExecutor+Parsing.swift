@@ -14,6 +14,9 @@ extension XCResultParseCommandExecutor {
         let schemeAttachmentsDirectory = artifactsDirectory
             .appendingPathComponent(sanitizePathComponent(schemeName), isDirectory: true)
             .appendingPathComponent("attachments", isDirectory: true)
+        if fileSystem.fileExists(atPath: schemeAttachmentsDirectory.path) {
+            try fileSystem.removeItem(atPath: schemeAttachmentsDirectory.path)
+        }
         try fileSystem.createDirectory(
             atPath: schemeAttachmentsDirectory.path,
             withIntermediateDirectories: true

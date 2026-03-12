@@ -20,6 +20,23 @@ struct FileSystemTests {
     }
 
     @Test
+    func removesExistingFileSystemItem() throws {
+        let fileManager = FileManager.default
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? fileManager.removeItem(at: directoryURL) }
+
+        let nestedDirectoryURL = directoryURL.appendingPathComponent("Nested", isDirectory: true)
+        try fileManager.createDirectory(at: nestedDirectoryURL, withIntermediateDirectories: true)
+
+        let fileSystem = FileSystem(fileManager: fileManager)
+        #expect(fileSystem.fileExists(atPath: nestedDirectoryURL.path))
+
+        try fileSystem.removeItem(atPath: nestedDirectoryURL.path)
+
+        #expect(!fileSystem.fileExists(atPath: nestedDirectoryURL.path))
+    }
+
+    @Test
     func recursivelyEnumeratesDirectoryContents() throws {
         let fileManager = FileManager.default
         let directoryURL = try makeTemporaryDirectory()

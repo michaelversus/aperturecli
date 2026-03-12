@@ -95,6 +95,10 @@ final class FileSystem: FileSystemProvider {
         try contents.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
+    func removeItem(atPath path: String) throws {
+        try fileManager.removeItem(atPath: path)
+    }
+
     func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws {
         try fileManager.createDirectory(
             atPath: path,

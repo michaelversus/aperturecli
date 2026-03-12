@@ -14,5 +14,6 @@ struct FileSystemProviderTests {
         #expect(fileSystem.currentDirectoryPath() == "/repo")
         #expect(fileSystem.fileExists(atPath: "/repo/file.txt"))
         #expect(try fileSystem.readFile(atPath: "/repo/file.txt") == "hello")
+        try fileSystem.removeItem(atPath: "/repo/file.txt")
     }
 }

@@ -2,6 +2,10 @@ import Foundation
 @testable import ApertureCLI
 
 final class MockFileSystem: FileSystemProvider {
+    struct RemoveItemOperation {
+        let path: String
+    }
+
     struct WriteOperation {
         let contents: String
         let path: String
@@ -19,8 +23,10 @@ final class MockFileSystem: FileSystemProvider {
     let recursiveDirectoryContentsByPath: [String: [URL]]
     let fileContentsByPath: [String: String]
     let libraryDirectoryURL: URL
+    let removeItemErrorByPath: [String: Error]
 
     private(set) var fileExistsCalls: [String] = []
+    private(set) var removeItemOperations: [RemoveItemOperation] = []
     private(set) var writeOperations: [WriteOperation] = []
     private(set) var createDirectoryOperations: [CreateDirectoryOperation] = []
 
@@ -31,6 +37,7 @@ final class MockFileSystem: FileSystemProvider {
         directoryContentsByPath: [String: [URL]] = [:],
         recursiveDirectoryContentsByPath: [String: [URL]] = [:],
         fileContentsByPath: [String: String] = [:],
+        removeItemErrorByPath: [String: Error] = [:],
         libraryDirectoryURL: URL = URL(fileURLWithPath: "/tmp", isDirectory: true)
     ) {
         self.currentDirectoryPathValue = currentDirectoryPath
@@ -39,6 +46,7 @@ final class MockFileSystem: FileSystemProvider {
         self.directoryContentsByPath = directoryContentsByPath
         self.recursiveDirectoryContentsByPath = recursiveDirectoryContentsByPath
         self.fileContentsByPath = fileContentsByPath
+        self.removeItemErrorByPath = removeItemErrorByPath
         self.libraryDirectoryURL = libraryDirectoryURL
     }
 
@@ -48,7 +56,8 @@ final class MockFileSystem: FileSystemProvider {
         libraryDirectoryURL: URL = URL(fileURLWithPath: "/tmp", isDirectory: true),
         contentsOfDirectoryResults: [URL: [URL]] = [:],
         recursiveContentsOfDirectoryResults: [URL: [URL]] = [:],
-        fileContentsByPath: [String: String] = [:]
+        fileContentsByPath: [String: String] = [:],
+        removeItemErrorByPath: [String: Error] = [:]
     ) {
         self.init(
             currentDirectoryPath: currentDirectoryPath,
@@ -61,6 +70,7 @@ final class MockFileSystem: FileSystemProvider {
                 uniqueKeysWithValues: recursiveContentsOfDirectoryResults.map { ($0.key.path, $0.value) }
             ),
             fileContentsByPath: fileContentsByPath,
+            removeItemErrorByPath: removeItemErrorByPath,
             libraryDirectoryURL: libraryDirectoryURL
         )
     }
@@ -107,6 +117,13 @@ final class MockFileSystem: FileSystemProvider {
 
     func writeFile(_ contents: String, toPath path: String) throws {
         writeOperations.append(WriteOperation(contents: contents, path: path))
+    }
+
+    func removeItem(atPath path: String) throws {
+        removeItemOperations.append(RemoveItemOperation(path: path))
+        if let error = removeItemErrorByPath[path] {
+            throw error
+        }
     }
 
     func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws {
