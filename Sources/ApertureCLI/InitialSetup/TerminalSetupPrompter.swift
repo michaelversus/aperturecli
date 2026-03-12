@@ -43,6 +43,20 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         }
     }
 
+    func promptOptionalValue(_ prompt: String) throws -> String {
+        ensureCanonicalTerminalModeIfTTY()
+        Self.writeToStdout("\(prompt): ")
+        guard let rawInput = readLine() else {
+            throw CleanExit.message("Input closed before setup completed.")
+        }
+
+        let value = rawInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !value.isEmpty {
+            output("✓ \(green(value))")
+        }
+        return value
+    }
+
     func promptConfirmation(_ prompt: String, defaultValue: Bool) throws -> Bool {
         let promptSuffix = defaultValue ? "[Y/n]" : "[y/N]"
 

@@ -15,7 +15,7 @@
 
 
 ## In Progress
-- implement custom xcresult parsing
+
 
 ## Done
 - init command under the user pwd wire things up
@@ -25,3 +25,5 @@
 - add lots of tests for every file
 - introduce derivedDataLocator
 - Implement xcresult parse command and initially use it just to find the proper xcresult files per xcsheme inside derived data.
+- use spawn bg process for test post actions
+- implement custom xcresult parsing

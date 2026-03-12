@@ -35,6 +35,15 @@ final class MockPrompter: InitialSetupPrompting {
         return requiredValues.removeFirst()
     }
 
+    func promptOptionalValue(_ prompt: String) throws -> String {
+        promptedValues.append(prompt)
+        guard !requiredValues.isEmpty else {
+            Issue.record("Unexpected prompt: \(prompt)")
+            return ""
+        }
+        return requiredValues.removeFirst()
+    }
+
     func promptConfirmation(_ prompt: String, defaultValue: Bool) throws -> Bool {
         confirmationPrompts.append(prompt)
         guard !confirmations.isEmpty else {

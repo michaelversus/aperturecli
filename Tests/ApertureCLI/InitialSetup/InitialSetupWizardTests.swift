@@ -173,6 +173,43 @@ struct InitialSetupWizardTests {
     }
 
     @Test
+    func allowsEmptyPackagesPathWhenLocalPackagesAreNotUsed() async throws {
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo",
+            existingPaths: [
+                "/repo/MyApp.xcodeproj"
+            ]
+        )
+        let prompter = MockPrompter(
+            requiredValues: [
+                "18.2",
+                "iPhone 16 Pro",
+                "16.2",
+                "MyApp",
+                ""
+            ],
+            selectedSchemes: ["Snapshots"]
+        )
+        let discoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["Snapshots"])
+        let synchronizer = MockSchemePostActionSynchronizer()
+        let configWriter = MockConfigWriter(configExists: false)
+        let wizard = InitialSetupWizard(
+            fileSystem: fileSystem,
+            prompter: prompter,
+            schemeDiscoverer: discoverer,
+            schemePostActionSynchronizer: synchronizer,
+            configWriter: configWriter
+        )
+
+        try await wizard.run()
+
+        let writtenConfig = try #require(configWriter.writtenConfig)
+        #expect(writtenConfig.spmPackagesContainerPath.isEmpty)
+        #expect(discoverer.receivedSPMPackagesPath == "")
+        #expect(synchronizer.receivedSPMPackagesPath == "")
+    }
+
+    @Test
     func doesNotWriteConfigWhenSchemeSyncFails() async throws {
         struct SyncFailure: Error {}
 

@@ -77,8 +77,9 @@ struct InitialSetupWizard {
         let xcodeVersion = try prompter.promptRequiredValue("Xcode version (for example: 16.2)")
         let projectFileName = try promptExistingProjectFileName(relativeTo: repoRootURL)
         let spmPackagesContainerPath = try promptExistingPathValue(
-            "Local SPM packages container path (for example: Packages)",
-            relativeTo: repoRootURL
+            "Local SPM packages container path (for example: Packages, leave empty if you don't support Local Packages)",
+            relativeTo: repoRootURL,
+            allowEmptyValue: true
         )
         let discoveredSchemes = try await prompter.performWithSpinner(
             prefix: "Scanning for available schemes",
@@ -103,9 +104,18 @@ struct InitialSetupWizard {
         )
     }
 
-    private func promptExistingPathValue(_ prompt: String, relativeTo rootURL: URL) throws -> String {
+    private func promptExistingPathValue(
+        _ prompt: String,
+        relativeTo rootURL: URL,
+        allowEmptyValue: Bool = false
+    ) throws -> String {
         while true {
-            let value = try prompter.promptRequiredValue(prompt)
+            let value = allowEmptyValue
+                ? try prompter.promptOptionalValue(prompt)
+                : try prompter.promptRequiredValue(prompt)
+            if allowEmptyValue && value.isEmpty {
+                return value
+            }
             let resolvedURL = resolvePath(value, relativeTo: rootURL)
             if fileSystem.fileExists(atPath: resolvedURL.path) {
                 return value

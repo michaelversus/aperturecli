@@ -38,18 +38,21 @@ struct SnapshotSchemeDiscoverer: SnapshotSchemeDiscovering {
             references.append(contentsOf: schemeReferences(from: projectSchemeFiles, source: .project))
         }
 
-        let spmPackagesContainerURL = resolvePath(spmPackagesContainerPath, relativeTo: repoRootURL)
-        if fileSystem.fileExists(atPath: spmPackagesContainerURL.path) {
-            let packageItems = try fileSystem.recursiveContentsOfDirectory(
-                at: spmPackagesContainerURL,
-                includingPropertiesForKeys: nil,
-                options: []
-            )
-            let packageSchemeFiles = packageItems.filter { itemURL in
-                let normalizedPath = itemURL.standardizedFileURL.path
-                return normalizedPath.contains("/.swiftpm/xcode/xcshareddata/xcschemes/")
+        let normalizedPackagesPath = spmPackagesContainerPath.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !normalizedPackagesPath.isEmpty {
+            let spmPackagesContainerURL = resolvePath(normalizedPackagesPath, relativeTo: repoRootURL)
+            if fileSystem.fileExists(atPath: spmPackagesContainerURL.path) {
+                let packageItems = try fileSystem.recursiveContentsOfDirectory(
+                    at: spmPackagesContainerURL,
+                    includingPropertiesForKeys: nil,
+                    options: []
+                )
+                let packageSchemeFiles = packageItems.filter { itemURL in
+                    let normalizedPath = itemURL.standardizedFileURL.path
+                    return normalizedPath.contains("/.swiftpm/xcode/xcshareddata/xcschemes/")
+                }
+                references.append(contentsOf: schemeReferences(from: packageSchemeFiles, source: .spm))
             }
-            references.append(contentsOf: schemeReferences(from: packageSchemeFiles, source: .spm))
         }
 
         return references

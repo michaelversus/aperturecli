@@ -107,4 +107,27 @@ struct SnapshotSchemeDiscovererTests {
         #expect(fileSystem.fileExistsCalls.contains(absolutePackagesURL.path))
         #expect(fileSystem.fileExistsCalls.contains("/repo/tmp/Packages") == false)
     }
+
+    @Test
+    func skipsPackageSchemeLookupWhenPackagesPathIsEmpty() throws {
+        let projectSchemesURL = URL(fileURLWithPath: "/repo/MyApp.xcodeproj/xcshareddata/xcschemes", isDirectory: true)
+        let fileSystem = MockFileSystem(
+            existingPaths: [projectSchemesURL.path],
+            directoryContentsByPath: [
+                projectSchemesURL.path: [
+                    projectSchemesURL.appendingPathComponent("Snapshots.xcscheme")
+                ]
+            ]
+        )
+        let discoverer = SnapshotSchemeDiscoverer(fileSystem: fileSystem)
+
+        let schemes = try discoverer.discoverSnapshotTestSchemes(
+            repoRoot: "/repo",
+            projectFileName: "MyApp.xcodeproj",
+            spmPackagesContainerPath: ""
+        )
+
+        #expect(schemes == ["Snapshots"])
+        #expect(!fileSystem.fileExistsCalls.contains("/repo"))
+    }
 }

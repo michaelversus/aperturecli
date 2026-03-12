@@ -4,12 +4,14 @@ import Testing
 struct InitialSetupPromptingTests {
     @Test
     func mockPrompterCanBeUsedThroughPromptingProtocol() async throws {
-        let prompter: InitialSetupPrompting = MockPrompter(requiredValues: ["18.2"])
+        let prompter: InitialSetupPrompting = MockPrompter(requiredValues: ["18.2", "Packages"])
 
-        let value = try prompter.promptRequiredValue("iOS version")
+        let requiredValue = try prompter.promptRequiredValue("iOS version")
+        let optionalValue = try prompter.promptOptionalValue("Packages path")
         let result = try await prompter.performWithSpinner(prefix: "Loading") { "done" }
 
-        #expect(value == "18.2")
+        #expect(requiredValue == "18.2")
+        #expect(optionalValue == "Packages")
         #expect(result == "done")
     }
 }
