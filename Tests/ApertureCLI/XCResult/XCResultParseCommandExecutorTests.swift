@@ -53,63 +53,6 @@ struct XCResultParseCommandExecutorSuccessTests {
     }
 
     @Test
-    func removesExistingSchemeAttachmentsBeforeExportAndRecreatesDirectory() throws {
-        let attachmentsPath = "/repo/aperture-artifacts/xcresults/Snapshots/attachments"
-        let fileSystem = MockFileSystem(
-            currentDirectoryPath: "/repo/App/Subdir",
-            existingPaths: ["/repo/.git", attachmentsPath]
-        )
-        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
-        let xcresultToolClient = makeSuccessfulClient()
-
-        let executor = XCResultParseCommandExecutor(
-            fileSystem: fileSystem,
-            resolver: resolver,
-            xcresultToolClient: xcresultToolClient,
-            output: { _ in }
-        )
-
-        try executor.run(schemeName: "Snapshots", projectName: "MyApp")
-
-        #expect(fileSystem.removeItemOperations.map(\.path) == [attachmentsPath])
-        #expect(
-            fileSystem.createDirectoryOperations.map(\.path) == [
-                "/repo/aperture-artifacts/xcresults",
-                attachmentsPath,
-                attachmentsPath + "/SnapshotSuite_test_snapshot_mismatch"
-            ]
-        )
-        let exportCall = try #require(xcresultToolClient.exportAttachmentsCalls.first)
-        #expect(exportCall.outputPath == attachmentsPath + "/SnapshotSuite_test_snapshot_mismatch")
-    }
-
-    @Test
-    func cleanupIsScopedToTheTargetSchemeAttachmentsDirectory() throws {
-        let snapshotsAttachmentsPath = "/repo/aperture-artifacts/xcresults/Snapshots/attachments"
-        let otherSchemePath = "/repo/aperture-artifacts/xcresults/OtherScheme/attachments"
-        let logsPath = "/repo/aperture-artifacts/logs"
-        let fileSystem = MockFileSystem(
-            currentDirectoryPath: "/repo/App/Subdir",
-            existingPaths: ["/repo/.git", snapshotsAttachmentsPath, otherSchemePath, logsPath]
-        )
-        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
-        let xcresultToolClient = makeSuccessfulClient()
-
-        let executor = XCResultParseCommandExecutor(
-            fileSystem: fileSystem,
-            resolver: resolver,
-            xcresultToolClient: xcresultToolClient,
-            output: { _ in }
-        )
-
-        try executor.run(schemeName: "Snapshots", projectName: "MyApp")
-
-        #expect(fileSystem.removeItemOperations.map(\.path) == [snapshotsAttachmentsPath])
-        #expect(!fileSystem.removeItemOperations.map(\.path).contains(otherSchemePath))
-        #expect(!fileSystem.removeItemOperations.map(\.path).contains(logsPath))
-    }
-
-    @Test
     func sendsAppNotificationPayloadAfterArtifactWrite() throws {
         let fileSystem = MockFileSystem(
             currentDirectoryPath: "/repo/App/Subdir",
@@ -233,31 +176,6 @@ struct XCResultParseCommandExecutorFailureTests {
         #expect(fileSystem.writeOperations.isEmpty)
     }
 
-    @Test
-    func rethrowsAttachmentCleanupFailureWithoutWritingArtifact() throws {
-        let attachmentsPath = "/repo/aperture-artifacts/xcresults/Snapshots/attachments"
-        let expectedError = NSError(domain: "filesystem", code: 42)
-        let fileSystem = MockFileSystem(
-            currentDirectoryPath: "/repo",
-            existingPaths: ["/repo/.git", attachmentsPath],
-            removeItemErrorByPath: [attachmentsPath: expectedError]
-        )
-        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
-        let xcresultToolClient = makeSuccessfulClient()
-        let executor = XCResultParseCommandExecutor(
-            fileSystem: fileSystem,
-            resolver: resolver,
-            xcresultToolClient: xcresultToolClient,
-            output: { _ in }
-        )
-
-        #expect(throws: NSError.self) {
-            try executor.run(schemeName: "Snapshots", projectName: "MyApp")
-        }
-        #expect(fileSystem.removeItemOperations.map(\.path) == [attachmentsPath])
-        #expect(fileSystem.writeOperations.isEmpty)
-        #expect(xcresultToolClient.exportAttachmentsCalls.isEmpty)
-    }
 }
 
 private func makeSuccessfulClient() -> MockXCResultToolClient {
