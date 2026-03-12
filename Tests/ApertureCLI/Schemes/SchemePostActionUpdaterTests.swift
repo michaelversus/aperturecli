@@ -36,6 +36,7 @@ struct SchemePostActionUpdaterTests {
             )
         )
         #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("ApertureCLI test executed"))
         #expect(write.contents.contains("2&gt;&amp;1"))
     }
 
@@ -115,6 +116,7 @@ struct SchemePostActionUpdaterTests {
         #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\""))
         #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("ApertureCLI test executed"))
         #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(
             write.contents.contains(
@@ -221,6 +223,7 @@ struct SchemePostActionUpdaterTests {
         #expect(write.contents.contains("--project-name &quot;$PROJECT_NAME&quot;") == false)
         #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(write.contents.contains("/aperture-artifacts/logs/MyScheme.log"))
+        #expect(write.contents.contains("ApertureCLI test executed"))
         #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(
             write.contents.contains(

@@ -2,23 +2,23 @@ import ArgumentParser
 import Foundation
 
 extension ApertureCLI {
-    struct XCResult: AsyncParsableCommand {
+    struct Test: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
-            commandName: "xcresult",
-            abstract: "XCResult inspection commands",
-            subcommands: [Parse.self]
+            commandName: "test",
+            abstract: "Test lifecycle commands",
+            subcommands: [Executed.self]
         )
     }
 }
 
-extension ApertureCLI.XCResult {
-    struct Parse: AsyncParsableCommand {
+extension ApertureCLI.Test {
+    struct Executed: AsyncParsableCommand {
         static let configuration = CommandConfiguration(
-            commandName: "parse",
-            abstract: "Emit xcresult parse metadata for deferred processing"
+            commandName: "executed",
+            abstract: "Emit test-executed metadata for deferred xcresult processing"
         )
 
-        @Option(name: .long, help: "Scheme name used to match xcresult files.")
+        @Option(name: .long, help: "Scheme name used for test execution.")
         var scheme: String
 
         @Option(name: .long, help: "Xcode project name (without .xcodeproj).")

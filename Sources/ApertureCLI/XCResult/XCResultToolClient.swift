@@ -9,6 +9,8 @@ struct XCResultToolClient: XCResultToolProviding {
             "xcresulttool", "get", "test-results", "summary",
             "--path", xcresultPath
         ]
+        emitSummaryDiagnostics(xcresultPath: xcresultPath)
+        Thread.sleep(forTimeInterval: 2.0)
         let output = try runCommandWithRetry(
             executable: "/usr/bin/xcrun",
             arguments: arguments
@@ -95,20 +97,38 @@ struct XCResultToolClient: XCResultToolProviding {
     }
 
     private func runCommandWithRetry(executable: String, arguments: [String]) throws -> String {
-        let maxAttempts = 4
-        var attempt = 0
+        // Result bundles can remain unreadable for several minutes after a run completes.
+        // Keep retrying transient "bundle not ready" errors within this time window.
+        let retryWindowSeconds = 8.0 * 60.0
+        let maxDelaySeconds = 5.0
+        let startDate = Date()
         var delaySeconds = 0.25
+        var attempt = 0
 
         while true {
             attempt += 1
             do {
+                emitDiagnostic("xcresult summary attempt=\(attempt)")
                 return try commandRunner.run(executable: executable, arguments: arguments)
             } catch {
-                guard attempt < maxAttempts, isTransientXCResultReadinessError(error) else {
+                let elapsed = Date().timeIntervalSince(startDate)
+                guard elapsed < retryWindowSeconds, isTransientXCResultReadinessError(error) else {
+                    emitDiagnostic(
+                        "xcresult summary failed after \(attempt) attempts elapsed="
+                            + String(format: "%.2f", elapsed)
+                            + "s error=\(error.localizedDescription)"
+                    )
                     throw error
                 }
+                emitDiagnostic(
+                    "xcresult summary transient failure attempt=\(attempt) elapsed="
+                        + String(format: "%.2f", elapsed)
+                        + "s retry_in="
+                        + String(format: "%.2f", delaySeconds)
+                        + "s error=\(error.localizedDescription)"
+                )
                 Thread.sleep(forTimeInterval: delaySeconds)
-                delaySeconds *= 2
+                delaySeconds = min(delaySeconds * 2, maxDelaySeconds)
             }
         }
     }
@@ -121,5 +141,32 @@ struct XCResultToolClient: XCResultToolProviding {
         return normalizedOutput.contains("info.plist")
             && normalizedOutput.contains("does not exist")
             && normalizedOutput.contains("result bundle")
+    }
+
+    private func emitSummaryDiagnostics(xcresultPath: String) {
+        let infoPlistPath = URL(fileURLWithPath: xcresultPath, isDirectory: true)
+            .appendingPathComponent("Info.plist", isDirectory: false)
+            .path
+        let databasePath = URL(fileURLWithPath: xcresultPath, isDirectory: true)
+            .appendingPathComponent("database.sqlite3", isDirectory: false)
+            .path
+        let cwd = FileManager.default.currentDirectoryPath
+
+        emitDiagnostic(
+            "xcresult summary preflight path=\(xcresultPath)"
+                + " cwd=\(cwd)"
+                + " uid=\(getuid())"
+                + " gid=\(getgid())"
+        )
+        emitDiagnostic(
+            "xcresult summary preflight exists bundle=\(fileSystem.fileExists(atPath: xcresultPath))"
+                + " info=\(fileSystem.fileExists(atPath: infoPlistPath))"
+                + " database=\(fileSystem.fileExists(atPath: databasePath))"
+        )
+    }
+
+    private func emitDiagnostic(_ message: String) {
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        Swift.print("[ApertureCLI][XCResult] \(timestamp) \(message)")
     }
 }

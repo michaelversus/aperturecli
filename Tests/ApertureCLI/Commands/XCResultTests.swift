@@ -18,7 +18,7 @@ struct XCResultTests {
         #expect(ApertureCLI.XCResult.Parse.configuration.commandName == "parse")
         #expect(
             ApertureCLI.XCResult.Parse.configuration.abstract
-                == "Resolve the most recent scheme xcresult path in DerivedData"
+                == "Emit xcresult parse metadata for deferred processing"
         )
     }
 }

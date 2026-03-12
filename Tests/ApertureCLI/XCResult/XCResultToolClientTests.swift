@@ -78,6 +78,47 @@ struct XCResultToolClientTests {
     }
 
     @Test
+    func fetchSummaryRetriesMultipleTransientReadinessErrors() throws {
+        let transientError = SubprocessRunnerError.commandFailed(
+            executable: "/usr/bin/xcrun",
+            arguments: ["xcresulttool", "get", "test-results", "summary"],
+            exitCode: 64,
+            output: """
+            Error: Failed to create a new result bundle reader, underlying error: \
+            Info.plist at /tmp/Test.xcresult/Info.plist does not exist, \
+            the result bundle might be corrupted
+            """
+        )
+        let runner = MockCommandRunner(
+            queuedResults: [
+                .failure(transientError),
+                .failure(transientError),
+                .failure(transientError),
+                .success(
+                    """
+                    {
+                      "result": "Passed",
+                      "totalTestCount": 1,
+                      "passedTests": 1,
+                      "failedTests": 0,
+                      "skippedTests": 0,
+                      "expectedFailures": 0,
+                      "devicesAndConfigurations": [],
+                      "testFailures": []
+                    }
+                    """
+                )
+            ]
+        )
+        let sut = XCResultToolClient(commandRunner: runner, fileSystem: MockFileSystem())
+
+        let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
+
+        #expect(summary.result == "Passed")
+        #expect(runner.invocations.count == 4)
+    }
+
+    @Test
     func fetchSummaryDoesNotRetryOnNonTransientError() throws {
         let nonTransientError = SubprocessRunnerError.commandFailed(
             executable: "/usr/bin/xcrun",

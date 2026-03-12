@@ -11,6 +11,7 @@
 ## TODO
 - remove debug command for Test post Actions
 - make local spm packages directory optional
+- empty selection for schemes should mean no test post actions setup
 
 
 ## In Progress
