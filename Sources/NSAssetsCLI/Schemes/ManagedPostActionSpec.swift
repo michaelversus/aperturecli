@@ -1,8 +1,6 @@
 import Foundation
 
 struct ManagedPostActionSpec: Sendable {
-    static let legacyTitles = ["ApertureCLI: Post Test Action"]
-
     let title: String
     let actionType: String
 

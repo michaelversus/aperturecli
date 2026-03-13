@@ -53,13 +53,11 @@ struct SchemePostActionUpdater: SchemePostActionUpdating {
     }
 
     private func removeExistingManagedActions(from postActions: XMLElement) {
-        let managedTitles = Set([managedSpec.title] + ManagedPostActionSpec.legacyTitles)
-
         for executionAction in postActions.elements(forName: "ExecutionAction") {
             guard
                 let actionContent = executionAction.elements(forName: "ActionContent").first,
                 let title = actionContent.attribute(forName: "title")?.stringValue,
-                managedTitles.contains(title)
+                title == managedSpec.title
             else {
                 continue
             }

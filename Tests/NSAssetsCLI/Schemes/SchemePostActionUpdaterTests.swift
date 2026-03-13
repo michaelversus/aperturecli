@@ -2,31 +2,22 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
+private let schemePath = "/repo/MyScheme.xcscheme"
+
 struct SchemePostActionUpdaterTests {
     @Test
     func addsPostActionsWhenMissing() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                   <TestAction buildConfiguration = "Debug">
-                   </TestAction>
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: emptyTestActionSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         try updater.updatePostAction(
-            at: path,
+            at: schemePath,
             schemeName: "MyScheme",
             projectName: "MyApp"
         )
 
         let write = try #require(fileSystem.writeOperations.first)
-        #expect(write.path == path)
+        #expect(write.path == schemePath)
         #expect(write.contents.contains("<PostActions>"))
         #expect(write.contents.contains("title=\"NSAssetsCLI: Post Test Action\""))
         #expect(write.contents.contains("WORKSPACE_PATH"))
@@ -44,31 +35,11 @@ struct SchemePostActionUpdaterTests {
 
     @Test
     func addsEnvironmentBuildableWhenBuildableReferenceExists() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <TestAction buildConfiguration = "Debug">
-                    <MacroExpansion>
-                      <BuildableReference
-                        BuildableIdentifier = "primary"
-                        BlueprintIdentifier = "ABC123"
-                        BuildableName = "MyApp.app"
-                        BlueprintName = "MyApp"
-                        ReferencedContainer = "container:MyApp.xcodeproj">
-                      </BuildableReference>
-                    </MacroExpansion>
-                  </TestAction>
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: macroExpansionSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         try updater.updatePostAction(
-            at: path,
+            at: schemePath,
             schemeName: "MyScheme",
             projectName: "MyApp"
         )
@@ -81,34 +52,11 @@ struct SchemePostActionUpdaterTests {
 
     @Test
     func preservesUserPostActionsAndReplacesManagedOne() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <TestAction buildConfiguration = "Debug">
-                    <PostActions>
-                      <ExecutionAction
-                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-                        <ActionContent title = "User Action" scriptText = "echo user&#10;">
-                        </ActionContent>
-                      </ExecutionAction>
-                      <ExecutionAction
-                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-                        <ActionContent title = "NSAssetsCLI: Post Test Action" scriptText = "echo old&#10;">
-                        </ActionContent>
-                      </ExecutionAction>
-                    </PostActions>
-                  </TestAction>
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: mixedPostActionsSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         try updater.updatePostAction(
-            at: path,
+            at: schemePath,
             schemeName: "MyScheme",
             projectName: "MyApp"
         )
@@ -132,22 +80,12 @@ struct SchemePostActionUpdaterTests {
 
     @Test
     func throwsWhenTestActionIsMissing() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <LaunchAction></LaunchAction>
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: missingTestActionSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        #expect(throws: SchemePostActionUpdaterError.missingTestAction(path: path)) {
+        #expect(throws: SchemePostActionUpdaterError.missingTestAction(path: schemePath)) {
             try updater.updatePostAction(
-                at: path,
+                at: schemePath,
                 schemeName: "MyScheme",
                 projectName: "MyApp"
             )
@@ -157,22 +95,12 @@ struct SchemePostActionUpdaterTests {
 
     @Test
     func throwsWhenSchemeXMLIsMalformed() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <TestAction buildConfiguration = "Debug">
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: malformedSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
-        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: path)) {
+        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: schemePath)) {
             try updater.updatePostAction(
-                at: path,
+                at: schemePath,
                 schemeName: "MyScheme",
                 projectName: "MyApp"
             )
@@ -181,43 +109,21 @@ struct SchemePostActionUpdaterTests {
 
     @Test
     func throwsWhenParsedDocumentHasNoRootElement() throws {
-        let path = "/repo/MyScheme.xcscheme"
         let updater = SchemePostActionUpdater(fileSystem: MockFileSystem())
         let xmlDocument = XMLDocument(kind: .document, options: .nodePreserveAll)
 
-        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: path)) {
-            _ = try updater.schemeRoot(in: xmlDocument, schemePath: path)
+        #expect(throws: SchemePostActionUpdaterError.invalidXML(path: schemePath)) {
+            _ = try updater.schemeRoot(in: xmlDocument, schemePath: schemePath)
         }
     }
 
     @Test
     func replacesOldManagedXCResultCommandWhenRerunningSetup() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <TestAction buildConfiguration = "Debug">
-                    <PostActions>
-                      <ExecutionAction
-                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-                        <ActionContent
-                          title = "NSAssetsCLI: Post Test Action"
-                          scriptText = "nsassets xcresult parse --scheme &quot;MyScheme&quot; \
-                          --project-name &quot;$PROJECT_NAME&quot; &#10;">
-                        </ActionContent>
-                      </ExecutionAction>
-                    </PostActions>
-                  </TestAction>
-                </Scheme>
-                """
-            ]
-        )
+        let fileSystem = makeFileSystem(withContentsAt: schemePath, xml: modernManagedPostActionSchemeXML)
         let updater = SchemePostActionUpdater(fileSystem: fileSystem)
 
         try updater.updatePostAction(
-            at: path,
+            at: schemePath,
             schemeName: "MyScheme",
             projectName: "MyApp"
         )
@@ -238,40 +144,85 @@ struct SchemePostActionUpdaterTests {
         )
     }
 
-    @Test
-    func replacesLegacyApertureManagedPostAction() throws {
-        let path = "/repo/MyScheme.xcscheme"
-        let fileSystem = MockFileSystem(
-            fileContentsByPath: [
-                path: """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Scheme version = "1.7">
-                  <TestAction buildConfiguration = "Debug">
-                    <PostActions>
-                      <ExecutionAction
-                        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-                        <ActionContent
-                          title = "ApertureCLI: Post Test Action"
-                          scriptText = "aperture xcresult parse --scheme &quot;MyScheme&quot; &#10;">
-                        </ActionContent>
-                      </ExecutionAction>
-                    </PostActions>
-                  </TestAction>
-                </Scheme>
-                """
-            ]
-        )
-        let updater = SchemePostActionUpdater(fileSystem: fileSystem)
-
-        try updater.updatePostAction(
-            at: path,
-            schemeName: "MyScheme",
-            projectName: "MyApp"
-        )
-
-        let write = try #require(fileSystem.writeOperations.first)
-        #expect(write.contents.contains("title=\"ApertureCLI: Post Test Action\"") == false)
-        #expect(write.contents.contains("title=\"NSAssetsCLI: Post Test Action\""))
-        #expect(write.contents.contains("scriptText=\"aperture xcresult parse") == false)
-    }
 }
+
+private func makeFileSystem(withContentsAt path: String, xml: String) -> MockFileSystem {
+    MockFileSystem(fileContentsByPath: [path: xml])
+}
+
+private let emptyTestActionSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+   <TestAction buildConfiguration = "Debug">
+   </TestAction>
+</Scheme>
+"""
+
+private let macroExpansionSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+  <TestAction buildConfiguration = "Debug">
+    <MacroExpansion>
+      <BuildableReference
+        BuildableIdentifier = "primary"
+        BlueprintIdentifier = "ABC123"
+        BuildableName = "MyApp.app"
+        BlueprintName = "MyApp"
+        ReferencedContainer = "container:MyApp.xcodeproj">
+      </BuildableReference>
+    </MacroExpansion>
+  </TestAction>
+</Scheme>
+"""
+
+private let mixedPostActionsSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+  <TestAction buildConfiguration = "Debug">
+    <PostActions>
+      <ExecutionAction
+        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+        <ActionContent title = "User Action" scriptText = "echo user&#10;">
+        </ActionContent>
+      </ExecutionAction>
+      <ExecutionAction
+        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+        <ActionContent title = "NSAssetsCLI: Post Test Action" scriptText = "echo old&#10;">
+        </ActionContent>
+      </ExecutionAction>
+    </PostActions>
+  </TestAction>
+</Scheme>
+"""
+
+private let missingTestActionSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+  <LaunchAction></LaunchAction>
+</Scheme>
+"""
+
+private let malformedSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+  <TestAction buildConfiguration = "Debug">
+</Scheme>
+"""
+
+private let modernManagedPostActionSchemeXML = """
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme version = "1.7">
+  <TestAction buildConfiguration = "Debug">
+    <PostActions>
+      <ExecutionAction
+        ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+        <ActionContent
+          title = "NSAssetsCLI: Post Test Action"
+          scriptText = "nsassets xcresult parse --scheme &quot;MyScheme&quot; \
+          --project-name &quot;$PROJECT_NAME&quot; &#10;">
+        </ActionContent>
+      </ExecutionAction>
+    </PostActions>
+  </TestAction>
+</Scheme>
+"""
