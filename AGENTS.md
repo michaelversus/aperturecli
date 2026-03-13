@@ -1,9 +1,9 @@
 # AGENTS.md
 
 ## Project Overview
-ApertureCLI is a bridge CLI between Aperture Studio, a macOS snapshot test assets viewer app, and Xcode.
-ApertureCLI is responsible for the config that defines the environment that snapshot tests require to execute properly.
-ApertureCLI reads metadata when the user executes snapshot tests and communicates with the Aperture Studio macOS app.
+NSAssetsCLI is a bridge CLI between NSAssets Studio, a macOS snapshot test assets viewer app, and Xcode.
+NSAssetsCLI is responsible for the config that defines the environment that snapshot tests require to execute properly.
+NSAssetsCLI reads metadata when the user executes snapshot tests and communicates with the NSAssets Studio macOS app.
 
 ## Build
 - use the xcode mcp for build and run tests operations

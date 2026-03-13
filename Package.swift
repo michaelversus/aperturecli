@@ -4,22 +4,22 @@
 import PackageDescription
 
 let package = Package(
-    name: "ApertureCLI",
+    name: "NSAssetsCLI",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.2.0")
     ],
     targets: [
         .executableTarget(
-            name: "ApertureCLI",
+            name: "NSAssetsCLI",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser")
             ]
         ),
         .testTarget(
-            name: "ApertureCLITests",
-            dependencies: ["ApertureCLI"],
-            exclude: ["ApertureCLI.xctestplan"]
+            name: "NSAssetsCLITests",
+            dependencies: ["NSAssetsCLI"],
+            exclude: ["NSAssetsCLI.xctestplan"]
         )
     ]
 )
