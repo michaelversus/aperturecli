@@ -19,7 +19,7 @@ struct SchemePostActionUpdaterTests {
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.path == schemePath)
         #expect(write.contents.contains("<PostActions>"))
-        #expect(write.contents.contains("title=\"NSAssetsCLI: Post Test Action\""))
+        #expect(write.contents.contains("title=\"nsassets: Post Test Action\""))
         #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(
             write.contents.contains(
@@ -27,7 +27,7 @@ struct SchemePostActionUpdaterTests {
             )
         )
         #expect(write.contents.contains("/nsassets-artifacts/logs/MyScheme.log"))
-        #expect(write.contents.contains("$REPO_ROOT/.build/debug/NSAssetsCLI"))
+        #expect(write.contents.contains("$REPO_ROOT/.build/debug/nsassets"))
         #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(write.contents.contains(") &amp;"))
         #expect(write.contents.contains("LOG_PATH") == false)
@@ -63,10 +63,10 @@ struct SchemePostActionUpdaterTests {
 
         let write = try #require(fileSystem.writeOperations.first)
         #expect(write.contents.contains("title=\"User Action\""))
-        #expect(write.contents.contains("title=\"NSAssetsCLI: Post Test Action\""))
+        #expect(write.contents.contains("title=\"nsassets: Post Test Action\""))
         #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(write.contents.contains("/nsassets-artifacts/logs/MyScheme.log"))
-        #expect(write.contents.contains("$REPO_ROOT/.build/debug/NSAssetsCLI"))
+        #expect(write.contents.contains("$REPO_ROOT/.build/debug/nsassets"))
         #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(write.contents.contains(") &amp;"))
         #expect(write.contents.contains("LOG_PATH") == false)
@@ -129,11 +129,11 @@ struct SchemePostActionUpdaterTests {
         )
 
         let write = try #require(fileSystem.writeOperations.first)
-        #expect(write.contents.contains("title=\"NSAssetsCLI: Post Test Action\""))
+        #expect(write.contents.contains("title=\"nsassets: Post Test Action\""))
         #expect(write.contents.contains("--project-name &quot;$PROJECT_NAME&quot;") == false)
         #expect(write.contents.contains("WORKSPACE_PATH"))
         #expect(write.contents.contains("/nsassets-artifacts/logs/MyScheme.log"))
-        #expect(write.contents.contains("$REPO_ROOT/.build/debug/NSAssetsCLI"))
+        #expect(write.contents.contains("$REPO_ROOT/.build/debug/nsassets"))
         #expect(write.contents.contains("2&gt;&amp;1"))
         #expect(write.contents.contains(") &amp;"))
         #expect(write.contents.contains("LOG_PATH") == false)
@@ -187,7 +187,7 @@ private let mixedPostActionsSchemeXML = """
       </ExecutionAction>
       <ExecutionAction
         ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
-        <ActionContent title = "NSAssetsCLI: Post Test Action" scriptText = "echo old&#10;">
+        <ActionContent title = "nsassets: Post Test Action" scriptText = "echo old&#10;">
         </ActionContent>
       </ExecutionAction>
     </PostActions>
@@ -217,7 +217,7 @@ private let modernManagedPostActionSchemeXML = """
       <ExecutionAction
         ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
         <ActionContent
-          title = "NSAssetsCLI: Post Test Action"
+          title = "nsassets: Post Test Action"
           scriptText = "nsassets xcresult parse --scheme &quot;MyScheme&quot; \
           --project-name &quot;$PROJECT_NAME&quot; &#10;">
         </ActionContent>

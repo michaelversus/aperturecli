@@ -166,6 +166,6 @@ struct XCResultToolClient: XCResultToolProviding {
 
     private func emitDiagnostic(_ message: String) {
         let timestamp = ISO8601DateFormatter().string(from: Date())
-        Swift.print("[NSAssetsCLI][XCResult] \(timestamp) \(message)")
+        Swift.print("[nsassets][XCResult] \(timestamp) \(message)")
     }
 }
