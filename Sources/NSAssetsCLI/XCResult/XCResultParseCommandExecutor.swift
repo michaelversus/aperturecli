@@ -28,6 +28,7 @@ struct XCResultParseCommandExecutor {
 
     func run(schemeName: String, projectName: String, workspacePath: String? = nil) throws {
         let xcresultPath = try resolver.resolvePath(schemeName: schemeName, projectName: projectName)
+        let notificationProjectName = resolveNotificationProjectName(workspacePath: workspacePath)
         let summary = try xcresultToolClient.fetchSummary(xcresultPath: xcresultPath)
         let directories = try prepareArtifactDirectories(
             schemeName: schemeName,
@@ -70,11 +71,17 @@ struct XCResultParseCommandExecutor {
         appBridge.notifyAppIfNeeded(
             payload: AppNotificationPayload(
                 schemeName: schemeName,
-                projectName: projectName,
+                projectName: notificationProjectName,
                 artifactPath: directories.artifactPath,
                 xcresultPath: xcresultPath
             )
         )
+    }
+
+    func resolveNotificationProjectName(workspacePath: String?) -> String {
+        let repoRoot = resolveRepoRoot(workspacePath: workspacePath)
+        let lastPathComponent = URL(fileURLWithPath: repoRoot, isDirectory: true).lastPathComponent
+        return lastPathComponent.isEmpty ? repoRoot : lastPathComponent
     }
 
     func resolveRepoRoot(workspacePath: String?) -> String {

@@ -74,9 +74,34 @@ struct XCResultParseCommandExecutorSuccessTests {
 
         let payload = try #require(appBridge.payloads.first)
         #expect(payload.schemeName == "Snapshots")
-        #expect(payload.projectName == "MyApp")
+        #expect(payload.projectName == "repo")
         #expect(payload.artifactPath == "/repo/nsassets-artifacts/xcresults/Snapshots.json")
         #expect(payload.xcresultPath == "/tmp/result.xcresult")
+    }
+
+    @Test
+    func sendsWorkspaceRootDirectoryNameInAppNotificationPayload() throws {
+        let fileSystem = MockFileSystem(currentDirectoryPath: "/tmp/elsewhere")
+        let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
+        let xcresultToolClient = makeSuccessfulClient()
+        let appBridge = MockAppBridge()
+
+        let executor = XCResultParseCommandExecutor(
+            fileSystem: fileSystem,
+            resolver: resolver,
+            xcresultToolClient: xcresultToolClient,
+            appBridge: appBridge,
+            output: { _ in }
+        )
+
+        try executor.run(
+            schemeName: "Snapshots",
+            projectName: "MyApp",
+            workspacePath: "/Users/me/Workspace/Feature/App.xcodeproj/project.pbxproj"
+        )
+
+        let payload = try #require(appBridge.payloads.first)
+        #expect(payload.projectName == "Feature")
     }
 
     @Test

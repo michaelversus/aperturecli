@@ -11,7 +11,6 @@
 
 ## In Progress
 
-
 ## Done
 - init command under the user pwd wire things up
 - init command request from user schemes to add post action scripts
@@ -29,3 +28,4 @@
 - How we should manage recurring test executions? Keep artifacts for all? 
 Maybe clean assets and keep only those of the last failure? We might want to clean up artifacts after every test execution.
 - init command maybe should ask to edit gitignore for the user to exclude nsassets-artifacts
+- send using notification the root path (e.g. iosnative1)

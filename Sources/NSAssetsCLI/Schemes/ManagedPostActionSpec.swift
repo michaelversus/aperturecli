@@ -15,11 +15,10 @@ struct ManagedPostActionSpec: Sendable {
     func scriptText(for schemeName: String, projectName: String) -> String {
         """
         (
-          REPO_ROOT="$(cd "$(dirname "$WORKSPACE_PATH")/.." && pwd)"
-          "$REPO_ROOT/.build/debug/NSAssetsCLI" xcresult parse \
+          /Users/m.karagiorgos/aperturecli/.build/debug/NSAssetsCLI xcresult parse \
           --scheme "\(schemeName)" --project-name "\(projectName)" \
           --workspace-path "$WORKSPACE_PATH" \
-          >> "$REPO_ROOT/nsassets-artifacts/logs/\(schemeName).log" 2>&1
+          >> "$(cd "$(dirname "$WORKSPACE_PATH")/.." && pwd)/nsassets-artifacts/logs/\(schemeName).log" 2>&1
         ) &
         """
             + "\n"
