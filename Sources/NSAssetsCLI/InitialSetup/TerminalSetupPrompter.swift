@@ -6,6 +6,9 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
     let output: (String) -> Void
     private let interactiveTerminalCheck: () -> Bool
     private let cursorSchemePrompter: ([String]) throws -> [String]
+    private let readInput: () -> String?
+    private let promptWriter: (String) -> Void
+    private let spinnerWriter: @Sendable (String) -> Void
 
     init(
         output: @escaping (String) -> Void,
@@ -14,11 +17,17 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         },
         cursorSchemePrompter: @escaping ([String]) throws -> [String] = { schemes in
             try CursorMultiSelect(options: schemes).run()
-        }
+        },
+        readInput: @escaping () -> String? = { readLine() },
+        promptWriter: @escaping (String) -> Void = Self.writeToStdout,
+        spinnerWriter: @escaping @Sendable (String) -> Void = Self.writeToStdout
     ) {
         self.output = output
         self.interactiveTerminalCheck = interactiveTerminalCheck
         self.cursorSchemePrompter = cursorSchemePrompter
+        self.readInput = readInput
+        self.promptWriter = promptWriter
+        self.spinnerWriter = spinnerWriter
     }
 
     func writeMessage(_ message: String) {
@@ -28,8 +37,8 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
     func promptRequiredValue(_ prompt: String) throws -> String {
         while true {
             ensureCanonicalTerminalModeIfTTY()
-            Self.writeToStdout("\(prompt): ")
-            guard let rawInput = readLine() else {
+            promptWriter("\(prompt): ")
+            guard let rawInput = readInput() else {
                 throw CleanExit.message("Input closed before setup completed.")
             }
 
@@ -45,8 +54,8 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
 
     func promptOptionalValue(_ prompt: String) throws -> String {
         ensureCanonicalTerminalModeIfTTY()
-        Self.writeToStdout("\(prompt): ")
-        guard let rawInput = readLine() else {
+        promptWriter("\(prompt): ")
+        guard let rawInput = readInput() else {
             throw CleanExit.message("Input closed before setup completed.")
         }
 
@@ -62,8 +71,8 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
 
         while true {
             ensureCanonicalTerminalModeIfTTY()
-            Self.writeToStdout("\(prompt) \(promptSuffix): ")
-            guard let rawInput = readLine() else {
+            promptWriter("\(prompt) \(promptSuffix): ")
+            guard let rawInput = readInput() else {
                 throw CleanExit.message("Input closed before setup completed.")
             }
 
@@ -174,21 +183,22 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
             return try await operation()
         }
 
+        let spinnerWriter = self.spinnerWriter
         return try await withThrowingTaskGroup(of: Void.self, returning: T.self) { group in
             group.addTask {
-                await Self.renderSpinner(prefix: prefix)
+                await Self.renderSpinner(prefix: prefix, writer: spinnerWriter)
             }
 
             do {
                 let value = try await operation()
                 group.cancelAll()
                 while try await group.next() != nil {}
-                Self.writeToStdout("\r\u{1B}[2K")
+                spinnerWriter("\r\u{1B}[2K")
                 return value
             } catch {
                 group.cancelAll()
                 while try await group.next() != nil {}
-                Self.writeToStdout("\r\u{1B}[2K")
+                spinnerWriter("\r\u{1B}[2K")
                 throw error
             }
         }
@@ -235,12 +245,15 @@ struct TerminalSetupPrompter: InitialSetupPrompting {
         _ = tcsetattr(STDIN_FILENO, TCSAFLUSH, &term)
     }
 
-    private static func renderSpinner(prefix: String) async {
+    private static func renderSpinner(
+        prefix: String,
+        writer: @escaping @Sendable (String) -> Void
+    ) async {
         let frames = ["|", "/", "-", "\\"]
         var index = 0
 
         while !Task.isCancelled {
-            writeToStdout("\r\(prefix) \(frames[index])")
+            writer("\r\(prefix) \(frames[index])")
             index = (index + 1) % frames.count
             try? await Task.sleep(nanoseconds: 100_000_000)
         }

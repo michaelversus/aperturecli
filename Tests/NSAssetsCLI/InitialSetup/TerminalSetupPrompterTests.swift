@@ -1,10 +1,8 @@
 import Foundation
 import Testing
-import Darwin
 import ArgumentParser
 @testable import NSAssetsCLI
 
-@Suite(.serialized)
 struct TerminalSetupPrompterTests {
     @Test
     func writeMessageUsesProvidedOutputClosure() {
@@ -19,14 +17,18 @@ struct TerminalSetupPrompterTests {
     @Test
     func promptRequiredValueRejectsEmptyInputBeforeReturningTrimmedValue() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["\n", "  18.2  \n"]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "\n  18.2  \n") {
-            let value = try prompter.promptRequiredValue("iOS version")
-            #expect(value == "18.2")
-        }
+        let value = try prompter.promptRequiredValue("iOS version")
 
-        #expect(stdout == "iOS version: iOS version: ")
+        #expect(value == "18.2")
+        #expect(prompts == ["iOS version: ", "iOS version: "])
         #expect(messages == [
             "Value cannot be empty. Please try again.",
             "✓ 18.2"
@@ -35,12 +37,15 @@ struct TerminalSetupPrompterTests {
 
     @Test
     func promptRequiredValueThrowsCleanExitWhenInputCloses() async throws {
-        let prompter = TerminalSetupPrompter(output: { _ in })
+        let prompter = TerminalSetupPrompter(
+            output: { _ in },
+            interactiveTerminalCheck: { false },
+            readInput: { nil },
+            promptWriter: { _ in }
+        )
 
         do {
-            _ = try await withRedirectedStandardStreams(stdin: "") {
-                try prompter.promptRequiredValue("iOS version")
-            }
+            _ = try prompter.promptRequiredValue("iOS version")
             Issue.record("Expected promptRequiredValue to exit when stdin closes.")
         } catch let error as CleanExit {
             #expect(String(describing: error) == "Input closed before setup completed.")
@@ -58,56 +63,78 @@ struct TerminalSetupPrompterTests {
         defaultValue: Bool,
         expected: Bool
     ) async throws {
-        let prompter = TerminalSetupPrompter(output: { _ in })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { _ in },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: [input]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: input) {
-            let result = try prompter.promptConfirmation("Continue", defaultValue: defaultValue)
-            #expect(result == expected)
-        }
+        let result = try prompter.promptConfirmation("Continue", defaultValue: defaultValue)
 
         let suffix = defaultValue ? "[Y/n]" : "[y/N]"
-        #expect(stdout == "Continue \(suffix): ")
+        #expect(result == expected)
+        #expect(prompts == ["Continue \(suffix): "])
     }
 
     @Test
     func promptConfirmationRetriesAfterInvalidResponse() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["maybe\n", "yes\n"]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "maybe\nyes\n") {
-            let result = try prompter.promptConfirmation("Continue", defaultValue: false)
-            #expect(result)
-        }
+        let result = try prompter.promptConfirmation("Continue", defaultValue: false)
 
-        #expect(stdout == "Continue [y/N]: Continue [y/N]: ")
+        #expect(result)
+        #expect(prompts == ["Continue [y/N]: ", "Continue [y/N]: "])
         #expect(messages == ["Please answer with 'y' or 'n'."])
     }
 
     @Test
     func promptConfirmationThrowsCleanExitWhenInputCloses() async throws {
-        let prompter = TerminalSetupPrompter(output: { _ in })
+        let prompter = TerminalSetupPrompter(
+            output: { _ in },
+            interactiveTerminalCheck: { false },
+            readInput: { nil },
+            promptWriter: { _ in }
+        )
 
         do {
-            _ = try await withRedirectedStandardStreams(stdin: "") {
-                try prompter.promptConfirmation("Continue", defaultValue: true)
-            }
+            _ = try prompter.promptConfirmation("Continue", defaultValue: true)
             Issue.record("Expected promptConfirmation to exit when stdin closes.")
         } catch let error as CleanExit {
             #expect(String(describing: error) == "Input closed before setup completed.")
         }
     }
+}
 
+struct TerminalSetupSchemeTests {
     @Test
     func promptSnapshotTestSchemesFallsBackToManualEntryWhenNothingIsDiscovered() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["Snapshots, FeatureSnapshots\n"]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "Snapshots, FeatureSnapshots\n") {
-            let schemes = try prompter.promptSnapshotTestSchemes(from: [])
-            #expect(schemes == ["Snapshots", "FeatureSnapshots"])
-        }
+        let schemes = try prompter.promptSnapshotTestSchemes(from: [])
 
-        #expect(stdout.contains("Provide snapshot test schemes manually"))
+        #expect(schemes == ["Snapshots", "FeatureSnapshots"])
+        #expect(
+            prompts == [
+                "Provide snapshot test schemes manually (comma-separated, " +
+                    "for example: MyAppSnapshots,MyFeatureSnapshots, leave empty to skip): "
+            ]
+        )
         #expect(messages == [
             "No .xcscheme files were discovered automatically.",
             "✓ Snapshots, FeatureSnapshots",
@@ -118,14 +145,23 @@ struct TerminalSetupPrompterTests {
     @Test
     func promptSnapshotTestSchemesAllowsEmptyManualEntryToSkipSync() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["\n"]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "\n") {
-            let schemes = try prompter.promptSnapshotTestSchemes(from: [])
-            #expect(schemes.isEmpty)
-        }
+        let schemes = try prompter.promptSnapshotTestSchemes(from: [])
 
-        #expect(stdout.contains("Provide snapshot test schemes manually"))
+        #expect(schemes.isEmpty)
+        #expect(
+            prompts == [
+                "Provide snapshot test schemes manually (comma-separated, " +
+                    "for example: MyAppSnapshots,MyFeatureSnapshots, leave empty to skip): "
+            ]
+        )
         #expect(messages == [
             "No .xcscheme files were discovered automatically.",
             "No schemes selected. Skipping scheme post-action sync."
@@ -135,18 +171,25 @@ struct TerminalSetupPrompterTests {
     @Test
     func promptSnapshotTestSchemesRetriesInvalidSelectionsAndDeduplicatesResults() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["4\n", "2, snapshots, 2\n"]),
+            promptWriter: { prompts.append($0) }
+        )
         let discoveredSchemes = ["Snapshots", "FeatureSnapshots"]
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "4\n2, snapshots, 2\n") {
-            let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
-            #expect(schemes == ["FeatureSnapshots", "Snapshots"])
-        }
+        let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
 
+        #expect(schemes == ["FeatureSnapshots", "Snapshots"])
         #expect(
-            stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
-                "leave empty to skip): Select snapshot test schemes by number or name " +
-                "(comma-separated, or 'all', leave empty to skip): "
+            prompts == [
+                "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
+                    "leave empty to skip): ",
+                "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
+                    "leave empty to skip): "
+            ]
         )
         #expect(messages == [
             "Discovered schemes:",
@@ -162,17 +205,23 @@ struct TerminalSetupPrompterTests {
     @Test
     func promptSnapshotTestSchemesReturnsAllDiscoveredSchemesForAllShortcut() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["all\n"]),
+            promptWriter: { prompts.append($0) }
+        )
         let discoveredSchemes = ["Snapshots", "FeatureSnapshots"]
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "all\n") {
-            let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
-            #expect(schemes == discoveredSchemes)
-        }
+        let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
 
+        #expect(schemes == discoveredSchemes)
         #expect(
-            stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
-                "leave empty to skip): "
+            prompts == [
+                "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
+                    "leave empty to skip): "
+            ]
         )
         #expect(messages == [
             "Discovered schemes:",
@@ -186,17 +235,23 @@ struct TerminalSetupPrompterTests {
     @Test
     func promptSnapshotTestSchemesAllowsEmptyTypedSelectionToSkipSync() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["\n"]),
+            promptWriter: { prompts.append($0) }
+        )
         let discoveredSchemes = ["Snapshots", "FeatureSnapshots"]
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "\n") {
-            let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
-            #expect(schemes.isEmpty)
-        }
+        let schemes = try prompter.promptSnapshotTestSchemes(from: discoveredSchemes)
 
+        #expect(schemes.isEmpty)
         #expect(
-            stdout == "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
-                "leave empty to skip): "
+            prompts == [
+                "Select snapshot test schemes by number or name (comma-separated, or 'all', " +
+                    "leave empty to skip): "
+            ]
         )
         #expect(messages == [
             "Discovered schemes:",
@@ -252,98 +307,87 @@ struct TerminalSetupPrompterTests {
 
     @Test
     func performWithSpinnerRunsOperationWithoutWritingSpinnerOutputWhenTerminalIsNotInteractive() async throws {
-        let prompter = TerminalSetupPrompter(output: { _ in })
+        let spinnerRecorder = ThreadSafeStringRecorder()
+        let prompter = TerminalSetupPrompter(
+            output: { _ in },
+            interactiveTerminalCheck: { false },
+            spinnerWriter: { spinnerRecorder.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "") {
-            let result = try await prompter.performWithSpinner(prefix: "Loading") { "done" }
-            #expect(result == "done")
-        }
+        let result = try await prompter.performWithSpinner(prefix: "Loading") { "done" }
 
-        #expect(stdout.isEmpty)
+        #expect(result == "done")
+        #expect(spinnerRecorder.isEmpty)
     }
 
     @Test
     func performWithSpinnerRendersAndClearsSpinnerWhenTerminalIsInteractive() async throws {
+        let spinnerRecorder = ThreadSafeStringRecorder()
         let prompter = TerminalSetupPrompter(
             output: { _ in },
-            interactiveTerminalCheck: { true }
+            interactiveTerminalCheck: { true },
+            spinnerWriter: { spinnerRecorder.append($0) }
         )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "") {
-            let result = try await prompter.performWithSpinner(prefix: "Loading") {
-                try await Task.sleep(nanoseconds: 150_000_000)
-                return "done"
-            }
-            #expect(result == "done")
+        let result = try await prompter.performWithSpinner(prefix: "Loading") {
+            try await Task.sleep(nanoseconds: 150_000_000)
+            return "done"
         }
+        let stdout = spinnerRecorder.joined()
 
+        #expect(result == "done")
         #expect(stdout.contains("\rLoading "))
         #expect(stdout.hasSuffix("\r\u{1B}[2K"))
     }
 }
 
-@Suite(.serialized)
 struct TerminalSetupPrompterOptionalPromptTests {
     @Test
     func promptOptionalValueAllowsEmptyInput() async throws {
         var messages: [String] = []
-        let prompter = TerminalSetupPrompter(output: { messages.append($0) })
+        var prompts: [String] = []
+        let prompter = TerminalSetupPrompter(
+            output: { messages.append($0) },
+            interactiveTerminalCheck: { false },
+            readInput: makeReadInput(inputs: ["\n"]),
+            promptWriter: { prompts.append($0) }
+        )
 
-        let stdout = try await withRedirectedStandardStreams(stdin: "\n") {
-            let value = try prompter.promptOptionalValue("Local packages path")
-            #expect(value.isEmpty)
-        }
+        let value = try prompter.promptOptionalValue("Local packages path")
 
-        #expect(stdout == "Local packages path: ")
+        #expect(value.isEmpty)
+        #expect(prompts == ["Local packages path: "])
         #expect(messages.isEmpty)
     }
 }
 
-private func withRedirectedStandardStreams<T>(
-    stdin stdinContents: String,
-    operation: () async throws -> T
-) async throws -> String {
-    let savedStdin = dup(STDIN_FILENO)
-    let savedStdout = dup(STDOUT_FILENO)
-    guard savedStdin >= 0, savedStdout >= 0 else {
-        throw POSIXError(.EBADF)
+private func makeReadInput(inputs: [String]) -> () -> String? {
+    var remainingInputs = inputs
+    return {
+        guard !remainingInputs.isEmpty else { return nil }
+        return remainingInputs.removeFirst()
+    }
+}
+
+private final class ThreadSafeStringRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [String] = []
+
+    func append(_ value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        values.append(value)
     }
 
-    let stdinPipe = Pipe()
-    let stdoutPipe = Pipe()
-
-    if let data = stdinContents.data(using: .utf8), !data.isEmpty {
-        stdinPipe.fileHandleForWriting.write(data)
-    }
-    try stdinPipe.fileHandleForWriting.close()
-
-    guard dup2(stdinPipe.fileHandleForReading.fileDescriptor, STDIN_FILENO) >= 0 else {
-        throw POSIXError(.EBADF)
-    }
-    guard dup2(stdoutPipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO) >= 0 else {
-        throw POSIXError(.EBADF)
-    }
-    clearerr(stdin)
-    clearerr(stdout)
-
-    defer {
-        fflush(stdout)
-        _ = dup2(savedStdin, STDIN_FILENO)
-        _ = dup2(savedStdout, STDOUT_FILENO)
-        clearerr(stdin)
-        clearerr(stdout)
-        close(savedStdin)
-        close(savedStdout)
-        try? stdinPipe.fileHandleForReading.close()
-        try? stdoutPipe.fileHandleForReading.close()
+    var isEmpty: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.isEmpty
     }
 
-    _ = try await operation()
-
-    fflush(stdout)
-    _ = dup2(savedStdout, STDOUT_FILENO)
-    clearerr(stdout)
-    try stdoutPipe.fileHandleForWriting.close()
-    let data = try stdoutPipe.fileHandleForReading.readToEnd() ?? Data()
-    return String(bytes: data, encoding: .utf8) ?? ""
+    func joined() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+        return values.joined()
+    }
 }
