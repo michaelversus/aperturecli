@@ -3,6 +3,19 @@ import Foundation
 struct XCResultToolClient: XCResultToolProviding {
     let commandRunner: CommandRunning
     let fileSystem: FileSystemProvider
+    let sleep: (TimeInterval) -> Void
+
+    init(
+        commandRunner: CommandRunning,
+        fileSystem: FileSystemProvider,
+        sleep: @escaping (TimeInterval) -> Void = { interval in
+            Thread.sleep(forTimeInterval: interval)
+        }
+    ) {
+        self.commandRunner = commandRunner
+        self.fileSystem = fileSystem
+        self.sleep = sleep
+    }
 
     func fetchSummary(xcresultPath: String) throws -> XCResultToolModels.Summary {
         let arguments = [
@@ -10,7 +23,7 @@ struct XCResultToolClient: XCResultToolProviding {
             "--path", xcresultPath
         ]
         emitSummaryDiagnostics(xcresultPath: xcresultPath)
-        Thread.sleep(forTimeInterval: 2.0)
+        sleep(2.0)
         let output = try runCommandWithRetry(
             executable: "/usr/bin/xcrun",
             arguments: arguments
@@ -126,7 +139,7 @@ struct XCResultToolClient: XCResultToolProviding {
                         + String(format: "%.2f", delaySeconds)
                         + "s error=\(error.localizedDescription)"
                 )
-                Thread.sleep(forTimeInterval: delaySeconds)
+                sleep(delaySeconds)
                 delaySeconds = min(delaySeconds * 2, maxDelaySeconds)
             }
         }

@@ -24,12 +24,14 @@ struct XCResultToolClientTests {
             ]
         )
         let fileSystem = MockFileSystem()
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: fileSystem)
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
 
         let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
 
         #expect(summary.result == "Passed")
         #expect(summary.totalTestCount == 1)
+        #expect(sleepRecorder.intervals == [2.0])
         let invocation = try #require(runner.invocations.first)
         #expect(invocation.executable == "/usr/bin/xcrun")
         #expect(
@@ -69,12 +71,14 @@ struct XCResultToolClientTests {
                 )
             ]
         )
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: MockFileSystem())
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
 
         let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
 
         #expect(summary.result == "Passed")
         #expect(runner.invocations.count == 2)
+        #expect(sleepRecorder.intervals == [2.0, 0.25])
     }
 
     @Test
@@ -110,12 +114,14 @@ struct XCResultToolClientTests {
                 )
             ]
         )
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: MockFileSystem())
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
 
         let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
 
         #expect(summary.result == "Passed")
         #expect(runner.invocations.count == 4)
+        #expect(sleepRecorder.intervals == [2.0, 0.25, 0.5, 1.0])
     }
 
     @Test
@@ -127,7 +133,8 @@ struct XCResultToolClientTests {
             output: "Error: bad invocation"
         )
         let runner = MockCommandRunner(queuedResults: [.failure(nonTransientError)])
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: MockFileSystem())
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
 
         #expect(throws: SubprocessRunnerError.commandFailed(
             executable: "/usr/bin/xcrun",
@@ -138,6 +145,7 @@ struct XCResultToolClientTests {
             try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
         }
         #expect(runner.invocations.count == 1)
+        #expect(sleepRecorder.intervals == [2.0])
     }
 
     @Test
@@ -163,12 +171,14 @@ struct XCResultToolClientTests {
             ]
         )
         let fileSystem = MockFileSystem()
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: fileSystem)
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
 
         _ = try sut.fetchTestDetails(xcresultPath: "/tmp/run.xcresult", testIdentifier: "Suite/testName")
         _ = try sut.fetchTestActivities(xcresultPath: "/tmp/run.xcresult", testIdentifier: "Suite/testName")
 
         #expect(runner.invocations.count == 2)
+        #expect(sleepRecorder.intervals.isEmpty)
         #expect(
             runner.invocations[0].arguments
                 == [
@@ -219,7 +229,8 @@ struct XCResultToolClientTests {
                     """
             ]
         )
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: fileSystem)
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
 
         let manifest = try sut.exportAttachments(
             xcresultPath: "/tmp/run.xcresult",
@@ -231,6 +242,7 @@ struct XCResultToolClientTests {
         #expect(manifest[0].attachments.count == 2)
         #expect(manifest[0].attachments[0].timestamp == 1.1)
         #expect(manifest[0].attachments[1].timestamp == nil)
+        #expect(sleepRecorder.intervals.isEmpty)
         let invocation = try #require(runner.invocations.first)
         #expect(
             invocation.arguments
@@ -247,7 +259,8 @@ struct XCResultToolClientTests {
     func exportAttachmentsThrowsWhenManifestIsMissing() throws {
         let runner = MockCommandRunner(queuedResults: [.success("ok")])
         let fileSystem = MockFileSystem(fileExistsResults: [:])
-        let sut = XCResultToolClient(commandRunner: runner, fileSystem: fileSystem)
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
 
         #expect(throws: XCResultToolClientError.missingManifest(path: "/tmp/export/manifest.json")) {
             try sut.exportAttachments(
@@ -256,5 +269,24 @@ struct XCResultToolClientTests {
                 outputPath: "/tmp/export"
             )
         }
+        #expect(sleepRecorder.intervals.isEmpty)
     }
+}
+
+private func makeSUT(
+    runner: MockCommandRunner,
+    fileSystem: FileSystemProvider,
+    sleepRecorder: SleepRecorder
+) -> XCResultToolClient {
+    XCResultToolClient(
+        commandRunner: runner,
+        fileSystem: fileSystem,
+        sleep: { interval in
+            sleepRecorder.intervals.append(interval)
+        }
+    )
+}
+
+private final class SleepRecorder {
+    var intervals: [TimeInterval] = []
 }
