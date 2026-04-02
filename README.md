@@ -1,4 +1,8 @@
-# nsassetscli
+<p align="center">
+    <img src="https://img.shields.io/badge/Swift-6.0-red.svg" />
+    <img src="https://codecov.io/gh/michaelversus/aperurecli/graph/badge.svg?token=QZY0GAVROV"/>
+</p>
+# 📸 nsassetscli
 
 `nsassetscli` is a macOS Swift CLI that connects Xcode snapshot test output with NSAssets macOS app.
 It helps you set up a repository for NSAssets-driven snapshot workflows, inject managed post-test actions into the right `.xcscheme` files, parse fresh `xcresult` data into structured JSON artifacts, and notify the NSAssets macOS app when new results are available.
@@ -38,7 +42,7 @@ nsassetscli xcresult parse \
 
 This writes a JSON summary to `nsassets-artifacts/xcresults/Snapshots.json`, exports failure attachments into a per-test folder, and attempts to notify NSAssets macOS app.
 
-## Installation
+## 🛠️ Installation
 
 ### Homebrew
 ```bash
