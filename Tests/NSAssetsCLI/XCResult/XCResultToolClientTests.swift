@@ -204,30 +204,7 @@ struct XCResultToolClientTests {
         let manifestPath = "/tmp/export/manifest.json"
         let fileSystem = MockFileSystem(
             fileExistsResults: [manifestPath: true],
-            fileContentsByPath: [
-                manifestPath:
-                    """
-                    [
-                      {
-                        "testIdentifier": "Suite/testName",
-                        "testIdentifierURL": "test://suite/testName",
-                        "attachments": [
-                          {
-                            "exportedFileName": "one.png",
-                            "suggestedHumanReadableName": "reference.png",
-                            "isAssociatedWithFailure": false,
-                            "timestamp": 1.1
-                          },
-                          {
-                            "exportedFileName": "two.txt",
-                            "suggestedHumanReadableName": "issue.txt",
-                            "isAssociatedWithFailure": true
-                          }
-                        ]
-                      }
-                    ]
-                    """
-            ]
+            fileContentsByPath: [manifestPath: exportedAttachmentsManifestJSON]
         )
         let sleepRecorder = SleepRecorder()
         let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
@@ -290,3 +267,26 @@ private func makeSUT(
 private final class SleepRecorder {
     var intervals: [TimeInterval] = []
 }
+
+private let exportedAttachmentsManifestJSON =
+    """
+    [
+      {
+        "testIdentifier": "Suite/testName",
+        "testIdentifierURL": "test://suite/testName",
+        "attachments": [
+          {
+            "exportedFileName": "one.png",
+            "suggestedHumanReadableName": "reference.png",
+            "isAssociatedWithFailure": false,
+            "timestamp": 1.1
+          },
+          {
+            "exportedFileName": "two.txt",
+            "suggestedHumanReadableName": "issue.txt",
+            "isAssociatedWithFailure": true
+          }
+        ]
+      }
+    ]
+    """
