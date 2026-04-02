@@ -20,15 +20,27 @@ jobs:
     - name: Run tests with coverage
       run: |
         set -o pipefail
-        swift test --enable-code-coverage 2>&1 | tee swift-test.log
+        status=0
+        swift test --enable-code-coverage 2>&1 | tee swift-test.log || status=$?
+        echo "swift test exit code: $status"
+        exit "$status"
     - name: Show failure summary
       if: failure()
       run: |
         echo "Tail of swift-test.log:"
-        tail -n 200 swift-test.log || true
+        tail -n 400 swift-test.log || true
         echo
         echo "Failure markers from swift-test.log:"
-        grep -n "✘\|Expectation failed\|error:\|fatalError\|failed after" swift-test.log || true
+        grep -nE "✘|Expectation failed|error:|fatalError|Suite .* failed|Test run with .* failed|unexpected signal|Abort trap|Segmentation fault|swift test exit code:" swift-test.log \
+          | grep -v "Info.plist at /tmp/Test.xcresult" \
+          | grep -v "xcresult summary failed after" \
+          || true
+    - name: Upload swift test log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: swift-test-log
+        path: swift-test.log
     - name: Generate coverage report (lcov)
       run: |
         set -euo pipefail
