@@ -23,7 +23,7 @@ jobs:
       run: |
         set -euo pipefail
         BIN_PATH="$(swift build --show-bin-path)"
-        TEST_BUNDLE="${BIN_PATH}/ApertureCLIPackageTests.xctest/Contents/MacOS/ApertureCLIPackageTests"
+        TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
         PROF_DATA="${BIN_PATH}/codecov/default.profdata"
         xcrun llvm-cov export \
           -format=lcov \
