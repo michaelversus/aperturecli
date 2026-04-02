@@ -18,14 +18,16 @@ jobs:
     - uses: actions/checkout@v4
     - uses: SwiftyLab/setup-swift@latest
     - name: Run tests with coverage
+      shell: bash
       run: |
         set -o pipefail
-        status=0
-        swift test --enable-code-coverage 2>&1 | tee swift-test.log || status=$?
-        echo "swift test exit code: $status"
+        swift test --enable-code-coverage 2>&1 | tee swift-test.log
+        status=${PIPESTATUS[0]}
+        echo "swift test exit code: $status" | tee -a swift-test.log
         exit "$status"
     - name: Show failure summary
       if: failure()
+      shell: bash
       run: |
         echo "Tail of swift-test.log:"
         tail -n 400 swift-test.log || true
