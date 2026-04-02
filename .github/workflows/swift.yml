@@ -24,8 +24,11 @@ jobs:
     - name: Show failure summary
       if: failure()
       run: |
+        echo "Tail of swift-test.log:"
+        tail -n 200 swift-test.log || true
+        echo
         echo "Failure markers from swift-test.log:"
-        grep -n "✘\|error:\|fatalError\|Expectation failed" swift-test.log || true
+        grep -n "✘\|Expectation failed\|error:\|fatalError\|failed after" swift-test.log || true
     - name: Generate coverage report (lcov)
       run: |
         set -euo pipefail
