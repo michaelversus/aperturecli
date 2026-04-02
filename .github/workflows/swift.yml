@@ -18,7 +18,14 @@ jobs:
     - uses: actions/checkout@v4
     - uses: SwiftyLab/setup-swift@latest
     - name: Run tests with coverage
-      run: swift test --enable-code-coverage
+      run: |
+        set -o pipefail
+        swift test --enable-code-coverage 2>&1 | tee swift-test.log
+    - name: Show failure summary
+      if: failure()
+      run: |
+        echo "Failure markers from swift-test.log:"
+        grep -n "✘\|error:\|fatalError\|Expectation failed" swift-test.log || true
     - name: Generate coverage report (lcov)
       run: |
         set -euo pipefail
