@@ -18,7 +18,10 @@ jobs:
     - uses: actions/checkout@v4
     - uses: SwiftyLab/setup-swift@latest
     - name: Run tests with coverage
-      run: swift test --enable-code-coverage
+      shell: bash
+      run: |
+        set -o pipefail
+        swift test --enable-code-coverage 2>&1 | tee swift-test.log
     - name: Generate coverage report (lcov)
       run: |
         set -euo pipefail
@@ -31,6 +34,31 @@ jobs:
           "${TEST_BUNDLE}" \
           -instr-profile "${PROF_DATA}" \
           > info.lcov
+    - name: Collect failure diagnostics
+      if: failure()
+      shell: bash
+      run: |
+        echo "Tail of swift-test.log:"
+        tail -n 400 swift-test.log || true
+        echo
+        echo "Recent crash reports:"
+        ls -1t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n 20 || true
+        echo
+        echo "Recent NSAssets-related crash report paths:"
+        find ~/Library/Logs/DiagnosticReports -maxdepth 1 \( -name 'swift-*' -o -name 'NSAssets*' -o -name 'NSAssetsCLI*' -o -name 'swift-frontend*' \) -type f 2>/dev/null | tail -n 20 || true
+    - name: Upload swift test log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: swift-test-log
+        path: swift-test.log
+    - name: Upload crash reports
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: diagnostic-reports
+        path: ~/Library/Logs/DiagnosticReports
+        if-no-files-found: ignore
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
