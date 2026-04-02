@@ -54,11 +54,16 @@ jobs:
           "${TEST_BUNDLE}" \
           -instr-profile "${PROF_DATA}" \
           > info.lcov
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: info-lcov
+        path: info.lcov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: michaelversus/aperturecli
         files: info.lcov
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         verbose: true
