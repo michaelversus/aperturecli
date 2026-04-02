@@ -15,7 +15,7 @@ struct ManagedPostActionSpec: Sendable {
     func scriptText(for schemeName: String, projectName: String) -> String {
         """
         (
-          /Users/m.karagiorgos/aperturecli/.build/debug/NSAssetsCLI xcresult parse \
+          nsassetscli xcresult parse \
           --scheme "\(schemeName)" --project-name "\(projectName)" \
           --workspace-path "$WORKSPACE_PATH" \
           >> "$(cd "$(dirname "$WORKSPACE_PATH")/.." && pwd)/nsassets-artifacts/logs/\(schemeName).log" 2>&1

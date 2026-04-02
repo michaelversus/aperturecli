@@ -1,15 +1,15 @@
 # NSAssets CLI Board
 
 ## Backlog
-- introduce lessons.md
 - Generate assertions for the app using the configuration properties
 
 # Current Sprint
 
 ## TODO
-- remove debug command for Test post Actions
+- release the CLI and make the repo public
 
 ## In Progress
+- brew setup
 
 ## Done
 - init command under the user pwd wire things up
@@ -29,3 +29,4 @@
 Maybe clean assets and keep only those of the last failure? We might want to clean up artifacts after every test execution.
 - init command maybe should ask to edit gitignore for the user to exclude nsassets-artifacts
 - send using notification the root path (e.g. iosnative1)
+- remove debug command for Test post Actions

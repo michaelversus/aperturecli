@@ -26,6 +26,7 @@ final class MockFileSystem: FileSystemProvider {
     let removeItemErrorByPath: [String: Error]
 
     private(set) var fileExistsCalls: [String] = []
+    private(set) var readFileCalls: [String] = []
     private(set) var removeItemOperations: [RemoveItemOperation] = []
     private(set) var writeOperations: [WriteOperation] = []
     private(set) var createDirectoryOperations: [CreateDirectoryOperation] = []
@@ -108,7 +109,8 @@ final class MockFileSystem: FileSystemProvider {
     }
 
     func readFile(atPath path: String) throws -> String {
-        fileContentsByPath[path] ?? ""
+        readFileCalls.append(path)
+        return fileContentsByPath[path] ?? ""
     }
 
     func readLines(atPath path: String) throws -> [String] {
