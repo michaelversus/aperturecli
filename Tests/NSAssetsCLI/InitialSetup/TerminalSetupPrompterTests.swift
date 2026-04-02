@@ -271,7 +271,7 @@ struct TerminalSetupPrompterTests {
 
         let stdout = try await withRedirectedStandardStreams(stdin: "") {
             let result = try await prompter.performWithSpinner(prefix: "Loading") {
-                usleep(150_000)
+                try await Task.sleep(nanoseconds: 150_000_000)
                 return "done"
             }
             #expect(result == "done")
