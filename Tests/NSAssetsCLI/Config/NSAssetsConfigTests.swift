@@ -2,9 +2,6 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
-@Suite(
-    .disabled("Temporarily disabled while investigating CI exit code 1 during test execution.")
-)
 struct NSAssetsConfigTests {
     @Test
     func decodingUsesDefaultsForOptionalFields() throws {

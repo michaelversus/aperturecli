@@ -3,10 +3,7 @@ import Darwin
 import ArgumentParser
 @testable import NSAssetsCLI
 
-@Suite(
-    .serialized,
-    .disabled("Temporarily disabled while investigating CI exit code 1 after terminal-related tests.")
-)
+@Suite(.serialized)
 struct TerminalRawModeTests {
     @Test
     func initThrowsCleanExitWhenTerminalAttributesCannotBeRead() {
