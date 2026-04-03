@@ -199,6 +199,9 @@ struct XCResultToolClientTests {
         #expect(sleepRecorder.intervals == [0.25])
     }
 
+}
+
+struct XCResultToolClientCommandTests {
     @Test
     func fetchTestDetailsAndActivitiesBuildExpectedCommands() throws {
         let runner = MockCommandRunner(
@@ -346,7 +349,7 @@ private func summaryReadyFileSystem() -> MockFileSystem {
     MockFileSystem(
         fileExistsResults: [
             "/tmp/run.xcresult": true,
-            "/tmp/run.xcresult/Info.plist": true,
+            "/tmp/run.xcresult/Info.plist": true
         ]
     )
 }

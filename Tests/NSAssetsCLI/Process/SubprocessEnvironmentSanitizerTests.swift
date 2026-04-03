@@ -8,7 +8,7 @@ struct SubprocessEnvironmentSanitizerTests {
             [
                 "HOME": "/Users/me",
                 "SWIFT_DEBUG_INFORMATION_FORMAT": "dwarf",
-                "SWIFT_DEBUG_INFORMATION_VERSION": "5.0",
+                "SWIFT_DEBUG_INFORMATION_VERSION": "5.0"
             ]
         )
 

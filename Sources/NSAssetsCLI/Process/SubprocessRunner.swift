@@ -62,7 +62,7 @@ struct SubprocessRunner: CommandRunning {
 enum SubprocessEnvironmentSanitizer {
     private static let removedVariables: Set<String> = [
         "SWIFT_DEBUG_INFORMATION_FORMAT",
-        "SWIFT_DEBUG_INFORMATION_VERSION",
+        "SWIFT_DEBUG_INFORMATION_VERSION"
     ]
 
     static func sanitize(_ environment: [String: String]) -> [String: String] {
