@@ -106,7 +106,10 @@ struct XCResultParseCommandExecutorSuccessTests {
 
     @Test
     func skipsPerTestParsingWhenThereAreNoFailures() throws {
-        let fileSystem = MockFileSystem(currentDirectoryPath: "/tmp/random")
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo",
+            existingPaths: ["/repo/.git"]
+        )
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
         let xcresultToolClient = MockXCResultToolClient(summaryHandler: { _ in
             try decodeSummary(noFailureSummaryJSON)
