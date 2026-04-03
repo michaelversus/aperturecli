@@ -81,6 +81,7 @@ If that command fails, reinstall or relink the formula, or edit the test post-ac
 
 ### `init`
 - Launches the interactive setup wizard.
+- Requires Xcode to be closed while the setup is running.
 - Scans project and package schemes to discover candidate snapshot test schemes.
 - Writes `.nsassets.json` in the current repository root.
 - Creates `nsassets-artifacts/logs`.
@@ -104,6 +105,8 @@ nsassetscli
 ```
 
 Because `init` is the default subcommand, running the root command without arguments starts the same workflow as `nsassetscli init`.
+
+Close Xcode before running `init` so the setup can safely inspect and update your scheme configuration.
 
 ### Rebuild managed scheme hooks from saved config
 ```bash
