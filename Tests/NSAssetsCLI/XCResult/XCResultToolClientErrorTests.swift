@@ -1,10 +1,7 @@
 import Testing
 @testable import NSAssetsCLI
 
-@Suite(
-    "XCResultToolClientError Tests",
-    .disabled("Temporarily disabled while investigating CI exit code 1 during test execution.")
-)
+@Suite("XCResultToolClientError Tests")
 struct XCResultToolClientErrorTests {
     @Test("test errorDescription with invalid JSON includes command and underlying error")
     func test_errorDescription_WithInvalidJSON_returnsDetailedMessage() throws {

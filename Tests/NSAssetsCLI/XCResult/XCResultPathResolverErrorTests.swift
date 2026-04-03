@@ -1,10 +1,7 @@
 import Testing
 @testable import NSAssetsCLI
 
-@Suite(
-    "XCResultPathResolverError Tests",
-    .disabled("Temporarily disabled while investigating CI exit code 1 during test execution.")
-)
+@Suite("XCResultPathResolverError Tests")
 struct XCResultPathResolverErrorTests {
     @Test("test errorDescription with invalid arguments returns guidance message")
     func test_errorDescription_WithInvalidArguments_returnsGuidanceMessage() throws {
