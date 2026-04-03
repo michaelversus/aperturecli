@@ -2,9 +2,6 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
-@Suite(
-    .disabled("Temporarily disabled while isolating XCResult attachment-cleanup CI behavior.")
-)
 struct XCResultParseCommandExecutorSuccessTests {
     @Test
     func writesStructuredArtifactWithFailedTestAttachments() throws {
@@ -167,7 +164,7 @@ struct XCResultParseCommandExecutorSuccessTests {
 }
 
 @Suite(
-    .disabled("Temporarily disabled while isolating XCResult attachment-cleanup CI behavior.")
+    .disabled("Temporarily disabled while isolating XCResult parse-executor success suite behavior.")
 )
 struct XCResultParseCommandExecutorFailureTests {
     @Test
