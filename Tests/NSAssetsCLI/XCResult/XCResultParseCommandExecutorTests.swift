@@ -2,9 +2,6 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
-@Suite(
-    .disabled("Temporarily disabled while investigating CI exit code 1 during test execution.")
-)
 struct XCResultParseCommandExecutorSuccessTests {
     @Test
     func writesStructuredArtifactWithFailedTestAttachments() throws {
@@ -166,9 +163,6 @@ struct XCResultParseCommandExecutorSuccessTests {
     }
 }
 
-@Suite(
-    .disabled("Temporarily disabled while investigating CI exit code 1 during test execution.")
-)
 struct XCResultParseCommandExecutorFailureTests {
     @Test
     func rethrowsResolverError() throws {
