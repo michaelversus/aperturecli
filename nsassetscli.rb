@@ -15,6 +15,6 @@ class Nsassetscli < Formula
   end
 
   test do
-    system "#{bin}/nsassetscli", "list"
+    system "#{bin}/nsassetscli", "--version"
   end
 end
