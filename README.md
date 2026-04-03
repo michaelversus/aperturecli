@@ -56,7 +56,21 @@ brew install nsassetscli
 make install prefix=/usr/local
 ```
 
-The managed Xcode post-action currently invokes `nsassetscli` directly, so the binary should be available on the PATH used by Xcode's scheme execution environment.
+## Troubleshooting
+
+If the Xcode post-action does not behave as expected, check the generated logs in:
+
+```bash
+nsassets-artifacts/logs/<SchemeName>.log
+```
+
+If the log shows a command-not-found error for `nsassetscli`, verify that Homebrew installed the binary at the expected path:
+
+```bash
+/opt/homebrew/bin/nsassetscli --version
+```
+
+If that command fails, reinstall or relink the formula, or edit the test post-actions for your scheme manually before rerunning your tests.
 
 ## Commands
 
