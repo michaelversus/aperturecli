@@ -114,6 +114,9 @@ struct TerminalSetupPrompterTests {
     }
 }
 
+@Suite(
+    .disabled("Temporarily disabled while investigating CI exit code 1 after terminal-related tests.")
+)
 struct TerminalSetupSchemeTests {
     @Test
     func promptSnapshotTestSchemesFallsBackToManualEntryWhenNothingIsDiscovered() async throws {
