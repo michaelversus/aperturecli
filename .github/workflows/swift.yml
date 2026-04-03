@@ -38,27 +38,27 @@ jobs:
       shell: bash
       run: |
         set -o pipefail
-        swift test --enable-code-coverage 2>&1 | tee swift-test.log
+        swift test --enable-code-coverage --no-parallel 2>&1 | tee swift-test.log
     - name: Generate coverage report (lcov)
       shell: bash
       run: |
         set -euo pipefail
-        BIN_PATH="$(swift build --show-bin-path)"
-        TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
-        PROF_DATA="${BIN_PATH}/codecov/default.profdata"
+        TEST_BUNDLE="$(find .build -path '*NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests' | head -n 1)"
+        PROF_DATA="$(find .build -path '*codecov/default.profdata' | head -n 1)"
         {
-          echo "BIN_PATH=${BIN_PATH}"
           echo "TEST_BUNDLE=${TEST_BUNDLE}"
           echo "PROF_DATA=${PROF_DATA}"
           echo
           echo "Checking coverage inputs..."
-          ls -ld "${BIN_PATH}" || true
-          ls -ld "${BIN_PATH}/NSAssetsCLIPackageTests.xctest" || true
-          ls -l "${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS" || true
-          ls -l "${BIN_PATH}/codecov" || true
+          find .build -maxdepth 5 \( -name 'NSAssetsCLIPackageTests.xctest' -o -name 'default.profdata' -o -name 'codecov' \) | sort || true
           echo
           echo "Running llvm-cov export..."
         } | tee coverage.log
+
+        if [[ -z "${TEST_BUNDLE}" || -z "${PROF_DATA}" ]]; then
+          echo "Missing coverage inputs." >> coverage.log
+          exit 1
+        fi
 
         xcrun llvm-cov export \
           -format=lcov \
@@ -92,6 +92,7 @@ jobs:
       with:
         name: coverage-log
         path: coverage.log
+        if-no-files-found: ignore
     - name: Upload crash reports
       if: failure()
       uses: actions/upload-artifact@v4
