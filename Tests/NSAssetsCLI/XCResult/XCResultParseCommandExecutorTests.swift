@@ -195,7 +195,10 @@ struct XCResultParseCommandExecutorFailureTests {
     @Test
     func rethrowsSummaryFailure() throws {
         print("[CI DEBUG] rethrowsSummaryFailure: start")
-        let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo",
+            existingPaths: ["/repo/.git"]
+        )
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
         let expectedError = ParseExecutorTestError.summaryFailure
         let xcresultToolClient = MockXCResultToolClient(summaryHandler: { path in
