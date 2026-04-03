@@ -1,105 +1,35 @@
 # This workflow will build a Swift project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
 
-name: NSAssetsCLI Unit Tests
+name: NSAssets Unit Tests
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   build:
 
-    runs-on: macos-15
+    runs-on: macos-14
 
     steps:
     - uses: actions/checkout@v4
-    - name: Select latest installed Xcode
-      shell: bash
-      run: |
-        set -euo pipefail
-        XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -n 1)"
-
-        if [[ -z "${XCODE_APP}" ]]; then
-          echo "No Xcode 26 installation found."
-          echo "Available Xcode apps:"
-          find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V
-          exit 1
-        fi
-
-        echo "Using Xcode at: ${XCODE_APP}"
-        echo "DEVELOPER_DIR=${XCODE_APP}/Contents/Developer" >> "${GITHUB_ENV}"
-        sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
-        xcodebuild -version
-        swift --version
+    - uses: SwiftyLab/setup-swift@latest
     - name: Run tests with coverage
-      shell: bash
-      run: |
-        set -o pipefail
-        swift test --enable-code-coverage --no-parallel 2>&1 | tee swift-test.log
+      run: swift test --enable-code-coverage
     - name: Generate coverage report (lcov)
-      shell: bash
       run: |
         set -euo pipefail
-        TEST_BUNDLE="$(find .build -path '*NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests' | head -n 1)"
-        PROF_DATA="$(find .build -path '*codecov/default.profdata' | head -n 1)"
-        {
-          echo "TEST_BUNDLE=${TEST_BUNDLE}"
-          echo "PROF_DATA=${PROF_DATA}"
-          echo
-          echo "Checking coverage inputs..."
-          find .build -maxdepth 5 \( -name 'NSAssetsCLIPackageTests.xctest' -o -name 'default.profdata' -o -name 'codecov' \) | sort || true
-          echo
-          echo "Running llvm-cov export..."
-        } | tee coverage.log
-
-        if [[ -z "${TEST_BUNDLE}" || -z "${PROF_DATA}" ]]; then
-          echo "Missing coverage inputs." >> coverage.log
-          exit 1
-        fi
-
+        BIN_PATH="$(swift build --show-bin-path)"
+        TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
+        PROF_DATA="${BIN_PATH}/codecov/default.profdata"
         xcrun llvm-cov export \
           -format=lcov \
           "${TEST_BUNDLE}" \
           -instr-profile "${PROF_DATA}" \
-          > info.lcov 2>> coverage.log
-    - name: Collect failure diagnostics
-      if: failure()
-      shell: bash
-      run: |
-        echo "Tail of swift-test.log:"
-        tail -n 400 swift-test.log || true
-        echo
-        echo "Tail of coverage.log:"
-        tail -n 200 coverage.log || true
-        echo
-        echo "Recent crash reports:"
-        ls -1t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n 20 || true
-        echo
-        echo "Recent NSAssets-related crash report paths:"
-        find ~/Library/Logs/DiagnosticReports -maxdepth 1 \( -name 'swift-*' -o -name 'NSAssets*' -o -name 'NSAssetsCLI*' -o -name 'swift-frontend*' \) -type f 2>/dev/null | tail -n 20 || true
-    - name: Upload swift test log
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: swift-test-log
-        path: swift-test.log
-    - name: Upload coverage log
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-log
-        path: coverage.log
-        if-no-files-found: ignore
-    - name: Upload crash reports
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: diagnostic-reports
-        path: ~/Library/Logs/DiagnosticReports
-        if-no-files-found: ignore
+          > info.lcov
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
