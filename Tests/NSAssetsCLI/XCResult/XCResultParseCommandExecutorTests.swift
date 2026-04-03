@@ -194,10 +194,14 @@ struct XCResultParseCommandExecutorFailureTests {
 
     @Test
     func rethrowsSummaryFailure() throws {
+        print("[CI DEBUG] rethrowsSummaryFailure: start")
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
         let expectedError = ParseExecutorTestError.summaryFailure
-        let xcresultToolClient = MockXCResultToolClient(summaryHandler: { _ in throw expectedError })
+        let xcresultToolClient = MockXCResultToolClient(summaryHandler: { path in
+            print("[CI DEBUG] rethrowsSummaryFailure: summaryHandler invoked for \(path)")
+            throw expectedError
+        })
         let executor = XCResultParseCommandExecutor(
             fileSystem: fileSystem,
             resolver: resolver,
@@ -206,14 +210,21 @@ struct XCResultParseCommandExecutorFailureTests {
         )
 
         do {
+            print("[CI DEBUG] rethrowsSummaryFailure: invoking executor.run")
             try executor.run(schemeName: "Snapshots", projectName: "MyApp")
+            print("[CI DEBUG] rethrowsSummaryFailure: executor.run returned without throwing")
             Issue.record("Expected summary fetch to rethrow its error.")
         } catch let error as ParseExecutorTestError {
+            print("[CI DEBUG] rethrowsSummaryFailure: caught expected error \(error)")
             #expect(error == .summaryFailure)
         } catch {
+            print("[CI DEBUG] rethrowsSummaryFailure: caught unexpected error \(String(describing: error))")
             Issue.record("Unexpected error type: \(String(describing: error))")
         }
+
+        print("[CI DEBUG] rethrowsSummaryFailure: write operations count = \(fileSystem.writeOperations.count)")
         #expect(fileSystem.writeOperations.isEmpty)
+        print("[CI DEBUG] rethrowsSummaryFailure: end")
     }
 
 }
