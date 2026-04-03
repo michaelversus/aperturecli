@@ -8,12 +8,10 @@ build:
 
 install: build
 	install -d "$(bindir)"
-	install ".build/release/NSAssetsCLI" "$(bindir)/nsassetscli"
-	ln -sf "$(bindir)/nsassetscli" "$(bindir)/NSAssetsCLI"
+	install ".build/release/NSAssetsCLI" "$(bindir)"
 
 uninstall:
-	rm -f "$(bindir)/nsassetscli"
-	rm -f "$(bindir)/NSAssetsCLI"
+	rm -rf "$(bindir)/NSAssetsCLI"
 
 clean:
 	rm -rf .build
