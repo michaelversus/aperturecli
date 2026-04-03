@@ -17,5 +17,24 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - uses: SwiftyLab/setup-swift@latest
-    - name: Run tests
-      run: swift test
+    - name: Run tests with coverage
+      run: swift test --enable-code-coverage
+    - name: Generate coverage report (lcov)
+      run: |
+        set -euo pipefail
+        BIN_PATH="$(swift build --show-bin-path)"
+        TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
+        PROF_DATA="${BIN_PATH}/codecov/default.profdata"
+        xcrun llvm-cov export \
+          -format=lcov \
+          "${TEST_BUNDLE}" \
+          -instr-profile "${PROF_DATA}" \
+          > info.lcov
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: michaelversus/aperturecli
+        files: info.lcov
+        fail_ci_if_error: true
+        verbose: true
