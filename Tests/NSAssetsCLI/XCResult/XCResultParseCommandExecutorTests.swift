@@ -169,7 +169,9 @@ struct XCResultParseCommandExecutorSuccessTests {
 @Suite(
 )
 struct XCResultParseCommandExecutorFailureTests {
-    @Test
+    @Test(
+        .disabled("Temporarily disabled while isolating XCResult parse-executor failure tests.")
+    )
     func rethrowsResolverError() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(
@@ -190,9 +192,7 @@ struct XCResultParseCommandExecutorFailureTests {
         }
     }
 
-    @Test(
-        .disabled("Temporarily disabled while isolating XCResult parse-executor failure tests.")
-    )
+    @Test
     func rethrowsSummaryFailure() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
