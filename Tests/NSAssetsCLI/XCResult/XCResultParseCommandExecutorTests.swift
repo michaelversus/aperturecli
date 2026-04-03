@@ -205,8 +205,13 @@ struct XCResultParseCommandExecutorFailureTests {
             output: { _ in }
         )
 
-        #expect(throws: ParseExecutorTestError.summaryFailure) {
+        do {
             try executor.run(schemeName: "Snapshots", projectName: "MyApp")
+            Issue.record("Expected summary fetch to rethrow its error.")
+        } catch let error as ParseExecutorTestError {
+            #expect(error == .summaryFailure)
+        } catch {
+            Issue.record("Unexpected error type: \(String(describing: error))")
         }
         #expect(fileSystem.writeOperations.isEmpty)
     }
