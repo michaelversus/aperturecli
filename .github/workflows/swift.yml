@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: macos-14
+    runs-on: macos-15
 
     steps:
     - uses: actions/checkout@v4
@@ -20,16 +20,10 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_16*.app' | sort -V | tail -n 1)"
-
-        if [[ -z "${XCODE_APP}" && -d /Applications/Xcode.app ]]; then
-          if /Applications/Xcode.app/Contents/Developer/usr/bin/swift --version 2>/dev/null | grep -q 'Apple Swift version 6'; then
-            XCODE_APP="/Applications/Xcode.app"
-          fi
-        fi
+        XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_26*.app' | sort -V | tail -n 1)"
 
         if [[ -z "${XCODE_APP}" ]]; then
-          echo "No Swift 6-compatible Xcode installation found."
+          echo "No Xcode 26 installation found."
           echo "Available Xcode apps:"
           find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V
           exit 1
