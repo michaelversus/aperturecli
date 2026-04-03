@@ -2,6 +2,7 @@
     <img src="https://img.shields.io/badge/Swift-6.0-red.svg" />
     <img src="https://codecov.io/gh/michaelversus/aperurecli/graph/badge.svg?token=X6D554DMMR"/>
 </p>
+
 # 📸 nsassetscli
 
 `nsassetscli` is a macOS Swift CLI that connects Xcode snapshot test output with NSAssets macOS app.
