@@ -196,7 +196,7 @@ struct XCResultParseCommandExecutorFailureTests {
     func rethrowsSummaryFailure() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
-        let expectedError = NSError(domain: "summary", code: 9)
+        let expectedError = ParseExecutorTestError.summaryFailure
         let xcresultToolClient = MockXCResultToolClient(summaryHandler: { _ in throw expectedError })
         let executor = XCResultParseCommandExecutor(
             fileSystem: fileSystem,
@@ -205,7 +205,7 @@ struct XCResultParseCommandExecutorFailureTests {
             output: { _ in }
         )
 
-        #expect(throws: NSError.self) {
+        #expect(throws: ParseExecutorTestError.summaryFailure) {
             try executor.run(schemeName: "Snapshots", projectName: "MyApp")
         }
         #expect(fileSystem.writeOperations.isEmpty)
@@ -220,6 +220,10 @@ private func makeSuccessfulClient() -> MockXCResultToolClient {
         testActivitiesHandler: { _, _ in makeTestActivities() },
         exportHandler: { _, _, _ in makeExportedManifest() }
     )
+}
+
+private enum ParseExecutorTestError: Error, Equatable {
+    case summaryFailure
 }
 
 private func makeTestDetails() -> XCResultToolModels.TestDetails {
