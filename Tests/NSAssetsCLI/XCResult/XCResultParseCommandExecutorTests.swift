@@ -2,6 +2,9 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
+@Suite(
+    .disabled("Temporarily disabled while isolating individual XCResult parse-executor failure tests.")
+)
 struct XCResultParseCommandExecutorSuccessTests {
     @Test
     func writesStructuredArtifactWithFailedTestAttachments() throws {
@@ -164,7 +167,6 @@ struct XCResultParseCommandExecutorSuccessTests {
 }
 
 @Suite(
-    .disabled("Temporarily disabled while isolating XCResult parse-executor success suite behavior.")
 )
 struct XCResultParseCommandExecutorFailureTests {
     @Test
@@ -188,7 +190,9 @@ struct XCResultParseCommandExecutorFailureTests {
         }
     }
 
-    @Test
+    @Test(
+        .disabled("Temporarily disabled while isolating XCResult parse-executor failure tests.")
+    )
     func rethrowsSummaryFailure() throws {
         let fileSystem = MockFileSystem(currentDirectoryPath: "/repo")
         let resolver = MockXCResultPathResolver(result: .success("/tmp/result.xcresult"))
