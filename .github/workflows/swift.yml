@@ -40,23 +40,40 @@ jobs:
         set -o pipefail
         swift test --enable-code-coverage 2>&1 | tee swift-test.log
     - name: Generate coverage report (lcov)
+      shell: bash
       run: |
         set -euo pipefail
         BIN_PATH="$(swift build --show-bin-path)"
         TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
         PROF_DATA="${BIN_PATH}/codecov/default.profdata"
-        echo "before xcrun executed"
+        {
+          echo "BIN_PATH=${BIN_PATH}"
+          echo "TEST_BUNDLE=${TEST_BUNDLE}"
+          echo "PROF_DATA=${PROF_DATA}"
+          echo
+          echo "Checking coverage inputs..."
+          ls -ld "${BIN_PATH}" || true
+          ls -ld "${BIN_PATH}/NSAssetsCLIPackageTests.xctest" || true
+          ls -l "${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS" || true
+          ls -l "${BIN_PATH}/codecov" || true
+          echo
+          echo "Running llvm-cov export..."
+        } | tee coverage.log
+
         xcrun llvm-cov export \
           -format=lcov \
           "${TEST_BUNDLE}" \
           -instr-profile "${PROF_DATA}" \
-          > info.lcov
+          > info.lcov 2>> coverage.log
     - name: Collect failure diagnostics
       if: failure()
       shell: bash
       run: |
         echo "Tail of swift-test.log:"
         tail -n 400 swift-test.log || true
+        echo
+        echo "Tail of coverage.log:"
+        tail -n 200 coverage.log || true
         echo
         echo "Recent crash reports:"
         ls -1t ~/Library/Logs/DiagnosticReports 2>/dev/null | head -n 20 || true
@@ -69,6 +86,12 @@ jobs:
       with:
         name: swift-test-log
         path: swift-test.log
+    - name: Upload coverage log
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-log
+        path: coverage.log
     - name: Upload crash reports
       if: failure()
       uses: actions/upload-artifact@v4
