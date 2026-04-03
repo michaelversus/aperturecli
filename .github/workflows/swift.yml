@@ -20,13 +20,18 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        if [[ -d /Applications/Xcode.app ]]; then
-          XCODE_APP="/Applications/Xcode.app"
-        else
-          XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V | tail -n 1)"
+        XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode_16*.app' | sort -V | tail -n 1)"
+
+        if [[ -z "${XCODE_APP}" && -d /Applications/Xcode.app ]]; then
+          if /Applications/Xcode.app/Contents/Developer/usr/bin/swift --version 2>/dev/null | grep -q 'Apple Swift version 6'; then
+            XCODE_APP="/Applications/Xcode.app"
+          fi
         fi
+
         if [[ -z "${XCODE_APP}" ]]; then
-          echo "No Xcode installation found in /Applications"
+          echo "No Swift 6-compatible Xcode installation found."
+          echo "Available Xcode apps:"
+          find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V
           exit 1
         fi
 
