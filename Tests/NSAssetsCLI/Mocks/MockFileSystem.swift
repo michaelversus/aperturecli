@@ -24,6 +24,7 @@ final class MockFileSystem: FileSystemProvider {
     let fileContentsByPath: [String: String]
     let libraryDirectoryURL: URL
     let removeItemErrorByPath: [String: Error]
+    private var sequentialFileExistsResults: [String: [Bool]]
 
     private(set) var fileExistsCalls: [String] = []
     private(set) var readFileCalls: [String] = []
@@ -39,6 +40,7 @@ final class MockFileSystem: FileSystemProvider {
         recursiveDirectoryContentsByPath: [String: [URL]] = [:],
         fileContentsByPath: [String: String] = [:],
         removeItemErrorByPath: [String: Error] = [:],
+        sequentialFileExistsResults: [String: [Bool]] = [:],
         libraryDirectoryURL: URL = URL(fileURLWithPath: "/tmp", isDirectory: true)
     ) {
         self.currentDirectoryPathValue = currentDirectoryPath
@@ -48,6 +50,7 @@ final class MockFileSystem: FileSystemProvider {
         self.recursiveDirectoryContentsByPath = recursiveDirectoryContentsByPath
         self.fileContentsByPath = fileContentsByPath
         self.removeItemErrorByPath = removeItemErrorByPath
+        self.sequentialFileExistsResults = sequentialFileExistsResults
         self.libraryDirectoryURL = libraryDirectoryURL
     }
 
@@ -78,6 +81,11 @@ final class MockFileSystem: FileSystemProvider {
 
     func fileExists(atPath path: String) -> Bool {
         fileExistsCalls.append(path)
+        if var queuedResults = sequentialFileExistsResults[path], !queuedResults.isEmpty {
+            let result = queuedResults.removeFirst()
+            sequentialFileExistsResults[path] = queuedResults
+            return result
+        }
         if let result = fileExistsResults[path] {
             return result
         }

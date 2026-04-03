@@ -30,6 +30,9 @@ struct SubprocessRunner: CommandRunning {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
+        process.environment = SubprocessEnvironmentSanitizer.sanitize(
+            ProcessInfo.processInfo.environment
+        )
 
         let combinedOutputPipe = Pipe()
         process.standardOutput = combinedOutputPipe
@@ -53,5 +56,29 @@ struct SubprocessRunner: CommandRunning {
         }
 
         return output
+    }
+}
+
+enum SubprocessEnvironmentSanitizer {
+    private static let removedVariables: Set<String> = [
+        "SWIFT_DEBUG_INFORMATION_FORMAT",
+        "SWIFT_DEBUG_INFORMATION_VERSION",
+    ]
+
+    static func sanitize(_ environment: [String: String]) -> [String: String] {
+        var sanitized = environment
+
+        for variable in removedVariables {
+            sanitized.removeValue(forKey: variable)
+        }
+
+        if let developerDirPath = sanitized["XCODE_DEVELOPER_DIR_PATH"] {
+            let trimmedPath = developerDirPath.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedPath.isEmpty || !trimmedPath.hasPrefix("/") {
+                sanitized.removeValue(forKey: "XCODE_DEVELOPER_DIR_PATH")
+            }
+        }
+
+        return sanitized
     }
 }

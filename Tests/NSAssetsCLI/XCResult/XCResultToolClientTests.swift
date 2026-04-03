@@ -23,7 +23,7 @@ struct XCResultToolClientTests {
                 )
             ]
         )
-        let fileSystem = MockFileSystem()
+        let fileSystem = summaryReadyFileSystem()
         let sleepRecorder = SleepRecorder()
         let sut = makeSUT(runner: runner, fileSystem: fileSystem, sleepRecorder: sleepRecorder)
 
@@ -31,7 +31,7 @@ struct XCResultToolClientTests {
 
         #expect(summary.result == "Passed")
         #expect(summary.totalTestCount == 1)
-        #expect(sleepRecorder.intervals == [2.0])
+        #expect(sleepRecorder.intervals.isEmpty)
         let invocation = try #require(runner.invocations.first)
         #expect(invocation.executable == "/usr/bin/xcrun")
         #expect(
@@ -72,13 +72,17 @@ struct XCResultToolClientTests {
             ]
         )
         let sleepRecorder = SleepRecorder()
-        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
+        let sut = makeSUT(
+            runner: runner,
+            fileSystem: summaryReadyFileSystem(),
+            sleepRecorder: sleepRecorder
+        )
 
         let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
 
         #expect(summary.result == "Passed")
         #expect(runner.invocations.count == 2)
-        #expect(sleepRecorder.intervals == [2.0, 0.25])
+        #expect(sleepRecorder.intervals == [0.25])
     }
 
     @Test
@@ -115,13 +119,17 @@ struct XCResultToolClientTests {
             ]
         )
         let sleepRecorder = SleepRecorder()
-        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
+        let sut = makeSUT(
+            runner: runner,
+            fileSystem: summaryReadyFileSystem(),
+            sleepRecorder: sleepRecorder
+        )
 
         let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
 
         #expect(summary.result == "Passed")
         #expect(runner.invocations.count == 4)
-        #expect(sleepRecorder.intervals == [2.0, 0.25, 0.5, 1.0])
+        #expect(sleepRecorder.intervals == [0.25, 0.5, 1.0])
     }
 
     @Test
@@ -134,7 +142,11 @@ struct XCResultToolClientTests {
         )
         let runner = MockCommandRunner(queuedResults: [.failure(nonTransientError)])
         let sleepRecorder = SleepRecorder()
-        let sut = makeSUT(runner: runner, fileSystem: MockFileSystem(), sleepRecorder: sleepRecorder)
+        let sut = makeSUT(
+            runner: runner,
+            fileSystem: summaryReadyFileSystem(),
+            sleepRecorder: sleepRecorder
+        )
 
         #expect(throws: SubprocessRunnerError.commandFailed(
             executable: "/usr/bin/xcrun",
@@ -145,7 +157,46 @@ struct XCResultToolClientTests {
             try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
         }
         #expect(runner.invocations.count == 1)
-        #expect(sleepRecorder.intervals == [2.0])
+        #expect(sleepRecorder.intervals.isEmpty)
+    }
+
+    @Test
+    func fetchSummaryWaitsForInfoPlistBeforeRunningCommand() throws {
+        let runner = MockCommandRunner(
+            queuedResults: [
+                .success(
+                    """
+                    {
+                      "result": "Passed",
+                      "totalTestCount": 1,
+                      "passedTests": 1,
+                      "failedTests": 0,
+                      "skippedTests": 0,
+                      "expectedFailures": 0,
+                      "devicesAndConfigurations": [],
+                      "testFailures": []
+                    }
+                    """
+                )
+            ]
+        )
+        let sleepRecorder = SleepRecorder()
+        let sut = makeSUT(
+            runner: runner,
+            fileSystem: MockFileSystem(
+                fileExistsResults: ["/tmp/run.xcresult": true],
+                sequentialFileExistsResults: [
+                    "/tmp/run.xcresult/Info.plist": [false, false, true]
+                ]
+            ),
+            sleepRecorder: sleepRecorder
+        )
+
+        let summary = try sut.fetchSummary(xcresultPath: "/tmp/run.xcresult")
+
+        #expect(summary.result == "Passed")
+        #expect(runner.invocations.count == 1)
+        #expect(sleepRecorder.intervals == [0.25])
     }
 
     @Test
@@ -290,3 +341,12 @@ private let exportedAttachmentsManifestJSON =
       }
     ]
     """
+
+private func summaryReadyFileSystem() -> MockFileSystem {
+    MockFileSystem(
+        fileExistsResults: [
+            "/tmp/run.xcresult": true,
+            "/tmp/run.xcresult/Info.plist": true,
+        ]
+    )
+}

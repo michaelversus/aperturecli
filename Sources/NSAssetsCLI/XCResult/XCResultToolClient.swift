@@ -23,10 +23,10 @@ struct XCResultToolClient: XCResultToolProviding {
             "--path", xcresultPath
         ]
         emitSummaryDiagnostics(xcresultPath: xcresultPath)
-        sleep(2.0)
         let output = try runCommandWithRetry(
             executable: "/usr/bin/xcrun",
-            arguments: arguments
+            arguments: arguments,
+            xcresultPath: xcresultPath
         )
         return try decode(
             XCResultToolModels.Summary.self,
@@ -109,7 +109,11 @@ struct XCResultToolClient: XCResultToolProviding {
         }
     }
 
-    private func runCommandWithRetry(executable: String, arguments: [String]) throws -> String {
+    private func runCommandWithRetry(
+        executable: String,
+        arguments: [String],
+        xcresultPath: String
+    ) throws -> String {
         // Keep retrying transient "bundle not ready" errors for up to 60 seconds.
         let retryWindowSeconds = 60.0
         let maxDelaySeconds = 5.0
@@ -119,6 +123,20 @@ struct XCResultToolClient: XCResultToolProviding {
 
         while true {
             attempt += 1
+            if let pendingReadiness = summaryReadinessStatusIfPending(
+                xcresultPath: xcresultPath,
+                attempt: attempt,
+                startDate: startDate,
+                retryWindowSeconds: retryWindowSeconds,
+                delaySeconds: delaySeconds
+            ) {
+                if pendingReadiness {
+                    sleep(delaySeconds)
+                    delaySeconds = min(delaySeconds * 2, maxDelaySeconds)
+                    continue
+                }
+            }
+
             do {
                 emitDiagnostic("xcresult summary attempt=\(attempt)")
                 return try commandRunner.run(executable: executable, arguments: arguments)
@@ -155,10 +173,43 @@ struct XCResultToolClient: XCResultToolProviding {
             && normalizedOutput.contains("result bundle")
     }
 
+    private func summaryReadinessStatusIfPending(
+        xcresultPath: String,
+        attempt: Int,
+        startDate: Date,
+        retryWindowSeconds: TimeInterval,
+        delaySeconds: TimeInterval
+    ) -> Bool? {
+        let infoPlistPath = summaryInfoPlistPath(for: xcresultPath)
+        let bundleExists = fileSystem.fileExists(atPath: xcresultPath)
+        let infoExists = fileSystem.fileExists(atPath: infoPlistPath)
+
+        guard !bundleExists || !infoExists else {
+            return nil
+        }
+
+        let elapsed = Date().timeIntervalSince(startDate)
+        guard elapsed < retryWindowSeconds else {
+            emitDiagnostic(
+                "xcresult summary readiness timed out attempt=\(attempt) elapsed="
+                    + String(format: "%.2f", elapsed)
+                    + "s bundle=\(bundleExists) info=\(infoExists)"
+            )
+            return false
+        }
+
+        emitDiagnostic(
+            "xcresult summary waiting for bundle readiness attempt=\(attempt) elapsed="
+                + String(format: "%.2f", elapsed)
+                + "s retry_in="
+                + String(format: "%.2f", delaySeconds)
+                + "s bundle=\(bundleExists) info=\(infoExists)"
+        )
+        return true
+    }
+
     private func emitSummaryDiagnostics(xcresultPath: String) {
-        let infoPlistPath = URL(fileURLWithPath: xcresultPath, isDirectory: true)
-            .appendingPathComponent("Info.plist", isDirectory: false)
-            .path
+        let infoPlistPath = summaryInfoPlistPath(for: xcresultPath)
         let databasePath = URL(fileURLWithPath: xcresultPath, isDirectory: true)
             .appendingPathComponent("database.sqlite3", isDirectory: false)
             .path
@@ -175,6 +226,12 @@ struct XCResultToolClient: XCResultToolProviding {
                 + " info=\(fileSystem.fileExists(atPath: infoPlistPath))"
                 + " database=\(fileSystem.fileExists(atPath: databasePath))"
         )
+    }
+
+    private func summaryInfoPlistPath(for xcresultPath: String) -> String {
+        URL(fileURLWithPath: xcresultPath, isDirectory: true)
+            .appendingPathComponent("Info.plist", isDirectory: false)
+            .path
     }
 
     private func emitDiagnostic(_ message: String) {
