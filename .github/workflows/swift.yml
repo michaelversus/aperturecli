@@ -16,7 +16,25 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-    - uses: SwiftyLab/setup-swift@latest
+    - name: Select latest installed Xcode
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [[ -d /Applications/Xcode.app ]]; then
+          XCODE_APP="/Applications/Xcode.app"
+        else
+          XCODE_APP="$(find /Applications -maxdepth 1 -type d -name 'Xcode*.app' | sort -V | tail -n 1)"
+        fi
+        if [[ -z "${XCODE_APP}" ]]; then
+          echo "No Xcode installation found in /Applications"
+          exit 1
+        fi
+
+        echo "Using Xcode at: ${XCODE_APP}"
+        echo "DEVELOPER_DIR=${XCODE_APP}/Contents/Developer" >> "${GITHUB_ENV}"
+        sudo xcode-select -s "${XCODE_APP}/Contents/Developer"
+        xcodebuild -version
+        swift --version
     - name: Run tests with coverage
       shell: bash
       run: |
