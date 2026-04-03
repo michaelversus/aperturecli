@@ -1,6 +1,6 @@
 # Version is managed by the VERSION file - do not edit manually
 # Run the Release workflow to bump version automatically
-class NSAssetsCLI < Formula
+class Nsassetscli < Formula
   APP_VERSION = File.read(File.join(__dir__, "VERSION")).strip.freeze
 
   desc "companion CLI for the NSAssets macOS application"
