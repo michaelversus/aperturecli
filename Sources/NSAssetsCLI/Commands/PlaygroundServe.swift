@@ -14,13 +14,15 @@ extension NSAssetsCLI.Playground {
         @Flag(name: .long, help: .hidden)
         var debugViewer = false
 
+        @Flag(name: .long, help: "Check every tap by comparing screens and the guest log. Adds seconds to each tap.")
+        var verifyTaps = false
+
         func run() async throws {
             let token = try PlaygroundTokenGenerator.make()
             let session = LiveSimulatorSession(udid: udid)
-            let verifier = SimulatorTapVerifier(
-                observer: SimctlScreenObserver(udid: udid),
-                settleDuration: .milliseconds(800)
-            )
+            let verifier = verifyTaps
+                ? SimulatorTapVerifier(observer: SimctlScreenObserver(udid: udid), settleDuration: .milliseconds(800))
+                : nil
             let server = PlaygroundChannelServer(
                 session: session,
                 token: token,
