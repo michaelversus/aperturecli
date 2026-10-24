@@ -4,7 +4,7 @@ import ArgumentParser
     static let configuration = CommandConfiguration(
         abstract: "CLI bridge for NSAssets Studio app and Xcode",
         version: version,
-        subcommands: [Initial.self, Schemes.self, XCResult.self],
+        subcommands: [Initial.self, Schemes.self, XCResult.self, Playground.self],
         defaultSubcommand: Initial.self
     )
 }
