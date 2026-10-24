@@ -14,7 +14,8 @@ Frames come from the framebuffer surface of the native-size display, cached and 
 
 ## Considered Options
 
-- **Legacy Indigo input**: kept only as a probe comparison. CoreSimulator 1155.4 and later drop most of it in the guest.
+- **Legacy Indigo input**: not carried into production. CoreSimulator 1155.4 and later drop most of it in the guest, and
+  it landed 0/5 here. The comparison code remains on the unmerged spike branch.
 - **Shelling out to `idb` or `AXe`**: rejected for the product, because it adds an installed dependency; the approach was
   studied and reimplemented instead.
 
@@ -24,5 +25,6 @@ Frames come from the framebuffer surface of the native-size display, cached and 
   `degraded` or `unsupported` with the CoreSimulator version, and the feature must degrade rather than crash.
 - The result is silent-failure prone, so a tap is only trusted when the screen changed and the guest log shows no
   dropped events.
+- A CoreSimulator older than 1155.4 does not ship the DTUHID daemon, so the probe reports it as unsupported.
 - Device Hub being attached did not stop DTUHID input here; the repair for legacy input kills running apps and is only
   ever printed, never run.

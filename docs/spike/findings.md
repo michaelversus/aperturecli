@@ -50,6 +50,8 @@ Safari, because the Clock app is not installed in the simulator image.
 - The simulator is chosen with an explicit `--udid`; the `.nsassets.json` lookup and the booted-simulator fallback from the
   spec are not implemented, so the spike cannot touch a simulator you did not name
 - `start()` boots the named simulator if it is shut down
+- Device Hub sets `dtuhidd.active` a few seconds after a boot, so a probe run straight after boot can still say
+  `supported` and report `degraded` moments later
 
 ## Verdict
 
