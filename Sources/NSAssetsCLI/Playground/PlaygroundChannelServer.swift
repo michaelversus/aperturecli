@@ -1,0 +1,281 @@
+import Foundation
+import Network
+
+/// Serves the live frames to authenticated clients over a WebSocket on the loopback interface only, and turns their
+/// tap messages into verified taps on the session.
+///
+/// A connection is refused during the handshake unless it offers the token as its subprotocol and carries no browser
+/// `Origin` (except one explicitly allowed for the debug viewer). After the handshake the client must say hello with a
+/// protocol number this CLI speaks before it receives frames or can tap.
+final class PlaygroundChannelServer: @unchecked Sendable {
+    /// Only touched on the server's serial queue.
+    private final class Client: @unchecked Sendable {
+        let connection: NWConnection
+        var isSending = false
+        var isHandshaken = false
+        init(connection: NWConnection) { self.connection = connection }
+    }
+
+    /// Set from the listener's state handler, which runs on the server's serial queue.
+    private final class OnceFlag: @unchecked Sendable {
+        var isSet = false
+    }
+
+    private let session: any SimulatorSession
+    private let token: String
+    private let verifier: SimulatorTapVerifier?
+    private let output: @Sendable (String) -> Void
+    private let requestedPort: UInt16
+    private let queue = DispatchQueue(label: "nsassets.playground.channel")
+
+    // Confined to `queue`.
+    private var listener: NWListener?
+    private var clients: [ObjectIdentifier: Client] = [:]
+    private var allowedOrigins: Set<String> = []
+    private var latestFrame: Data?
+    private var pump: Task<Void, Never>?
+    private var lastTap: Task<Void, Never>?
+
+    /// With a `verifier`, every tap is checked and its outcome is sent to `output`.
+    init(
+        session: any SimulatorSession,
+        token: String,
+        verifier: SimulatorTapVerifier? = nil,
+        output: @escaping @Sendable (String) -> Void = { _ in },
+        port: UInt16 = 0
+    ) {
+        self.session = session
+        self.token = token
+        self.verifier = verifier
+        self.output = output
+        self.requestedPort = port
+    }
+
+    /// Starts listening on loopback, starts the frame pump, and returns the port actually bound.
+    func start() async throws -> UInt16 {
+        let webSocketOptions = NWProtocolWebSocket.Options()
+        webSocketOptions.setClientRequestHandler(queue) { [weak self] subprotocols, headers in
+            // The framework answers a rejected handshake without closing the socket, so clients would hang. Every
+            // handshake is accepted instead, and only an authorized one gets the token subprotocol back; the rest
+            // are closed with a close frame as soon as the connection is ready.
+            let accepted = self?.acceptedSubprotocol(offered: subprotocols, headers: headers)
+            return NWProtocolWebSocket.Response(status: .accept, subprotocol: accepted)
+        }
+        let parameters = NWParameters.tcp
+        parameters.defaultProtocolStack.applicationProtocols.insert(webSocketOptions, at: 0)
+        parameters.requiredLocalEndpoint = .hostPort(
+            host: "127.0.0.1",
+            port: NWEndpoint.Port(rawValue: requestedPort) ?? .any
+        )
+        let listener = try NWListener(using: parameters)
+        listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
+        let port = try await bind(listener)
+
+        let session = session
+        pump = Task { [weak self] in
+            do {
+                for try await frame in session.frames() where !frame.isReplay {
+                    self?.broadcast(frame.jpegData)
+                }
+            } catch {
+                // A failed stream leaves clients on the last frame; the CLI prints nothing more here.
+            }
+        }
+        return port
+    }
+
+    /// Lets browser connections from this origin through, for the hidden debug viewer only.
+    func allow(origin: String) async {
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                allowedOrigins.insert(origin)
+                continuation.resume()
+            }
+        }
+    }
+
+    func stop() async {
+        pump?.cancel()
+        pump = nil
+        await withCheckedContinuation { continuation in
+            queue.async { [self] in
+                listener?.cancel()
+                listener = nil
+                clients.values.forEach { $0.connection.cancel() }
+                clients = [:]
+                continuation.resume()
+            }
+        }
+    }
+
+    // MARK: - Handshake
+
+    /// Runs on `queue`. Returns the subprotocol to accept, or `nil` to refuse the connection.
+    private func acceptedSubprotocol(
+        offered subprotocols: [String],
+        headers: [(name: String, value: String)]
+    ) -> String? {
+        let origin = headers.first { $0.name.caseInsensitiveCompare("Origin") == .orderedSame }?.value
+        if let origin, !allowedOrigins.contains(origin) { return nil }
+        let expected = PlaygroundChannel.subprotocol(token: token)
+        return subprotocols.first { $0 == expected }
+    }
+
+    /// Whether the handshake ended with the token subprotocol, which `acceptedSubprotocol` grants only to
+    /// authorized clients.
+    private func isAuthorized(_ connection: NWConnection) -> Bool {
+        let metadata = connection.metadata(definition: NWProtocolWebSocket.definition) as? NWProtocolWebSocket.Metadata
+        return metadata?.selectedSubprotocol == PlaygroundChannel.subprotocol(token: token)
+    }
+
+    private func bind(_ listener: NWListener) async throws -> UInt16 {
+        try await withCheckedThrowingContinuation { continuation in
+            let finished = OnceFlag()
+            listener.stateUpdateHandler = { state in
+                guard !finished.isSet else { return }
+                switch state {
+                case .ready:
+                    finished.isSet = true
+                    continuation.resume(returning: listener.port?.rawValue ?? 0)
+                case let .failed(error):
+                    finished.isSet = true
+                    continuation.resume(throwing: error)
+                default:
+                    break
+                }
+            }
+            listener.start(queue: queue)
+            queue.async { [self] in self.listener = listener }
+        }
+    }
+
+    // MARK: - Clients
+
+    private func accept(_ connection: NWConnection) {
+        let client = Client(connection: connection)
+        let key = ObjectIdentifier(client)
+        connection.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .ready:
+                guard isAuthorized(connection) else {
+                    close(client)
+                    return
+                }
+                clients[key] = client
+                sendText(.hello(), to: client)
+                receive(from: client)
+            case .failed, .cancelled:
+                clients[key] = nil
+            default:
+                break
+            }
+        }
+        connection.start(queue: queue)
+    }
+
+    private func receive(from client: Client) {
+        client.connection.receiveMessage { [weak self] data, context, _, error in
+            guard let self else { return }
+            let metadata = context?.protocolMetadata(definition: NWProtocolWebSocket.definition)
+                as? NWProtocolWebSocket.Metadata
+            if let data, metadata?.opcode == .text { handle(text: data, from: client) }
+            if error == nil { receive(from: client) }
+        }
+    }
+
+    private func handle(text: Data, from client: Client) {
+        let message = try? JSONDecoder().decode(PlaygroundClientMessage.self, from: text)
+        guard client.isHandshaken else {
+            completeHandshake(of: client, with: message)
+            return
+        }
+        guard let point = message?.tapPoint else { return }
+        // Taps run one after another, because verifying one compares screens before and after it.
+        let previous = lastTap
+        lastTap = Task { [self] in
+            await previous?.value
+            await perform(tap: point)
+        }
+    }
+
+    private func completeHandshake(of client: Client, with message: PlaygroundClientMessage?) {
+        guard message?.type == "hello", message?.protocolVersion == PlaygroundChannel.protocolVersion else {
+            if message?.type == "hello" {
+                sendText(.incompatible(clientProtocolVersion: message?.protocolVersion), to: client, thenClose: true)
+            } else {
+                close(client)
+            }
+            return
+        }
+        client.isHandshaken = true
+        if let latestFrame { send(latestFrame, to: client) }
+    }
+
+    private func perform(tap point: NormalizedPoint) async {
+        guard let verifier else {
+            try? await session.tap(at: point)
+            return
+        }
+        do {
+            output(try await verifier.verify(tap: point, on: session).summary)
+        } catch {
+            output("Tap failed: \(error)")
+        }
+    }
+
+    // MARK: - Sending
+
+    private func broadcast(_ frame: Data) {
+        queue.async { [self] in
+            latestFrame = frame
+            for client in clients.values where client.isHandshaken && !client.isSending { send(frame, to: client) }
+        }
+    }
+
+    /// A client that is still sending skips frames, so a slow client sees the latest frame, not a backlog.
+    private func send(_ frame: Data, to client: Client) {
+        client.isSending = true
+        let context = NWConnection.ContentContext(
+            identifier: "frame",
+            metadata: [NWProtocolWebSocket.Metadata(opcode: .binary)]
+        )
+        client.connection.send(
+            content: frame,
+            contentContext: context,
+            isComplete: true,
+            completion: .contentProcessed { [weak self] _ in
+                self?.queue.async { client.isSending = false }
+            }
+        )
+    }
+
+    private func sendText(_ message: PlaygroundServerMessage, to client: Client, thenClose: Bool = false) {
+        guard let data = try? JSONEncoder().encode(message) else { return }
+        let context = NWConnection.ContentContext(
+            identifier: "text",
+            metadata: [NWProtocolWebSocket.Metadata(opcode: .text)]
+        )
+        client.connection.send(
+            content: data,
+            contentContext: context,
+            isComplete: true,
+            completion: .contentProcessed { [weak self] _ in
+                guard thenClose, let self else { return }
+                queue.async { self.close(client) }
+            }
+        )
+    }
+
+    private func close(_ client: Client) {
+        let metadata = NWProtocolWebSocket.Metadata(opcode: .close)
+        metadata.closeCode = .protocolCode(.policyViolation)
+        let context = NWConnection.ContentContext(identifier: "close", metadata: [metadata])
+        client.connection.send(
+            content: nil,
+            contentContext: context,
+            isComplete: true,
+            completion: .contentProcessed { _ in client.connection.cancel() }
+        )
+    }
+}
