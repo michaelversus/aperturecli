@@ -13,6 +13,10 @@ _Avoid_: the app (when ambiguous), viewer
 A live, interactive view of a component running in a simulator, reached from the component's snapshot.
 _Avoid_: preview, live preview
 
+**Harness**:
+The small generated app that hosts one component in the simulator, rebuilt from the code the app sends.
+_Avoid_: host app, preview app
+
 **Simulator session**:
 One live connection to one explicitly chosen simulator, through which frames arrive and input is sent.
 _Avoid_: stream, connection

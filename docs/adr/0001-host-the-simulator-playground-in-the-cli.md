@@ -19,7 +19,7 @@ distributed through the App Store), at the cost that the app cannot start the pr
 ## Consequences
 
 - The app shows a "not running" state and the command to run; it needs only the outgoing-network entitlement it already has.
-- The final transport and how the app discovers and authenticates to the CLI are still open. The spike used a hardcoded
-  localhost WebSocket with no token, which is not acceptable for release.
+- The transport, discovery and authentication are decided in ADR 0003. The spike's hardcoded, tokenless localhost
+  WebSocket was only for the spike.
 - Reviewers may question an app feature that depends on a separately installed CLI; the optional, explained "not
   running" state is the mitigation.
