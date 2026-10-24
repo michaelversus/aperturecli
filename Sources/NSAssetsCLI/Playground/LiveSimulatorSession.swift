@@ -41,12 +41,6 @@ actor LiveSimulatorSession: SimulatorSession {
         guard let developerDirectory = inspector.resolveDeveloperDirectory() else {
             throw PlaygroundError.serviceContextUnavailable("no developer directory")
         }
-        // `bootstatus -b` boots the device if needed and waits until it has finished booting.
-        _ = try SubprocessRunner().run(
-            executable: "/usr/bin/xcrun",
-            arguments: ["simctl", "bootstatus", udid, "-b"]
-        )
-
         let device = try SimulatorDeviceHandle.find(udid: udid, developerDirectory: developerDirectory)
         guard device.isBooted else { throw PlaygroundError.deviceNotBooted(udid) }
         frameSource = FramebufferFrameSource(ioClient: try device.ioClient())

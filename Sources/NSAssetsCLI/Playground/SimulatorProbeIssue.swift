@@ -1,7 +1,7 @@
 enum SimulatorProbeIssue: Sendable, Equatable {
     case coreSimulatorNotFound
     case simulatorKitNotFound
-    case serviceContextClassMissing
+    case privateClassMissing(String)
     case xpcSymbolsMissing
     case coreSimulatorTooOld(minimum: String)
     case noFramebufferPort
@@ -15,7 +15,7 @@ enum SimulatorProbeIssue: Sendable, Equatable {
         switch self {
         case .coreSimulatorNotFound,
              .simulatorKitNotFound,
-             .serviceContextClassMissing,
+             .privateClassMissing,
              .xpcSymbolsMissing,
              .coreSimulatorTooOld,
              .noFramebufferPort:
@@ -35,8 +35,8 @@ extension SimulatorProbeIssue {
             "CoreSimulator framework not found."
         case .simulatorKitNotFound:
             "SimulatorKit framework not found, frames cannot be captured."
-        case .serviceContextClassMissing:
-            "CoreSimulator's SimServiceContext class is missing, simulators cannot be found."
+        case let .privateClassMissing(name):
+            "The private class \(name) is missing, so this Xcode is not compatible."
         case .xpcSymbolsMissing:
             "Private libxpc symbols for the DTUHID connection are missing, input cannot be sent."
         case let .coreSimulatorTooOld(minimum):

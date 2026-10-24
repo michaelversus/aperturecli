@@ -5,6 +5,7 @@ import XPC
 /// The wire shape (envelope keys, uint64 enums, normalized top-left coordinates) follows what
 /// facebook/idb (MIT) documents for Xcode 27.
 final class DTUHIDTouchSender: @unchecked Sendable {
+    // The "Indigo…" message types below are the names dtuhidd itself uses on the wire; they are not the legacy client.
     static let serviceName = "com.apple.coredevice.feature.remote.hid.digitizer"
 
     /// `dtuhidd` activates its virtual services only once it has a peer and drops earlier events,
@@ -27,7 +28,7 @@ final class DTUHIDTouchSender: @unchecked Sendable {
             let connection = try XPCServiceConnection(
                 port: try device.lookup(service: serviceName),
                 service: serviceName,
-                queue: DispatchQueue(label: "nsassets.spike.dtuhid")
+                queue: DispatchQueue(label: "nsassets.playground.dtuhid")
             )
             do {
                 try await connection.request(barrierMessage(), timeout: livenessTimeout)

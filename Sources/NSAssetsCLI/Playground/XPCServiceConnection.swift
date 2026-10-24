@@ -44,7 +44,7 @@ final class XPCServiceConnection: @unchecked Sendable {
         xpc_connection_send_message(connection, message)
     }
 
-    /// Resolves when XPC has handed everything sent so far to the transport.
+    /// Resolves when XPC has handed everything sent so far to the connection.
     func sendBarrier() async {
         await withCheckedContinuation { continuation in
             xpc_connection_send_barrier(connection) { continuation.resume() }

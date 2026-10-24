@@ -5,10 +5,10 @@ enum SimulatorProbeClassifier {
     static func classify(_ facts: SimulatorProbeFacts) -> SimulatorProbeResult {
         var issues: [SimulatorProbeIssue] = []
 
-        if !facts.coreSimulatorFound {
+        if facts.coreSimulatorFound {
+            issues += facts.missingPrivateClasses.map { .privateClassMissing($0) }
+        } else {
             issues.append(.coreSimulatorNotFound)
-        } else if !facts.serviceContextClassPresent {
-            issues.append(.serviceContextClassMissing)
         }
         if !facts.simulatorKitFound {
             issues.append(.simulatorKitNotFound)

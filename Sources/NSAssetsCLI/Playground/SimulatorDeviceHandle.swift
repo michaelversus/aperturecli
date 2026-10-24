@@ -1,6 +1,6 @@
 import Foundation
 
-/// A `SimDevice` found through the Objective-C runtime, with only the calls the spike needs.
+/// A `SimDevice` found through the Objective-C runtime, with only the calls the playground needs.
 /// CoreSimulator objects are used from the session's actor, so the handle is marked sendable.
 struct SimulatorDeviceHandle: @unchecked Sendable {
     private static let bootedState: UInt64 = 3

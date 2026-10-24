@@ -5,7 +5,8 @@ struct SimulatorProbeFacts: Sendable, Equatable {
     let coreSimulatorVersion: String?
     let coreSimulatorFound: Bool
     let simulatorKitFound: Bool
-    let serviceContextClassPresent: Bool
+    /// Private classes the playground needs that did not load; empty when all are present.
+    let missingPrivateClasses: [String]
     let xpcSymbolsPresent: Bool
     let simulatorUDID: String?
     let framebufferPortFound: Bool?
@@ -24,7 +25,7 @@ struct SimulatorProbeFacts: Sendable, Equatable {
             coreSimulatorVersion: coreSimulatorVersion,
             coreSimulatorFound: coreSimulatorFound,
             simulatorKitFound: simulatorKitFound,
-            serviceContextClassPresent: serviceContextClassPresent,
+            missingPrivateClasses: missingPrivateClasses,
             xpcSymbolsPresent: xpcSymbolsPresent,
             simulatorUDID: simulatorUDID,
             framebufferPortFound: portFound,

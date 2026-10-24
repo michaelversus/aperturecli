@@ -15,7 +15,7 @@ final class FramebufferFrameSource: @unchecked Sendable {
     private static let idleInterval = DispatchTimeInterval.milliseconds(200)
 
     private let ioClient: NSObject
-    private let queue = DispatchQueue(label: "nsassets.spike.framebuffer", qos: .userInteractive)
+    private let queue = DispatchQueue(label: "nsassets.playground.framebuffer", qos: .userInteractive)
     private let ciContext = CIContext()
     private let jpegQuality: Double
 

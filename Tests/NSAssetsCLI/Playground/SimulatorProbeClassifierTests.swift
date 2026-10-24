@@ -31,11 +31,23 @@ struct SimulatorProbeClassifierTests {
     }
 
     @Test
-    func aMissingServiceContextClassIsReportedAsAnIssue() {
-        let result = SimulatorProbeClassifier.classify(makeFacts(serviceContextClassPresent: false))
+    func everyMissingPrivateClassIsReportedAsAnIssue() {
+        let result = SimulatorProbeClassifier.classify(
+            makeFacts(missingPrivateClasses: ["SimDevice", "SimDeviceIOClient"])
+        )
 
         #expect(result.status == .unsupported)
-        #expect(result.issues.contains(.serviceContextClassMissing))
+        #expect(result.issues.contains(.privateClassMissing("SimDevice")))
+        #expect(result.issues.contains(.privateClassMissing("SimDeviceIOClient")))
+    }
+
+    @Test
+    func missingClassesAreNotReportedWhenCoreSimulatorItselfIsMissing() {
+        let result = SimulatorProbeClassifier.classify(
+            makeFacts(coreSimulatorFound: false, missingPrivateClasses: ["SimDevice"])
+        )
+
+        #expect(result.issues == [.coreSimulatorNotFound])
     }
 
     @Test
@@ -123,7 +135,7 @@ private func makeFacts(
     coreSimulatorVersion: String? = "1155.4",
     coreSimulatorFound: Bool = true,
     simulatorKitFound: Bool = true,
-    serviceContextClassPresent: Bool = true,
+    missingPrivateClasses: [String] = [],
     xpcSymbolsPresent: Bool = true,
     simulatorUDID: String? = "UDID-1",
     framebufferPortFound: Bool? = true,
@@ -136,7 +148,7 @@ private func makeFacts(
         coreSimulatorVersion: coreSimulatorVersion,
         coreSimulatorFound: coreSimulatorFound,
         simulatorKitFound: simulatorKitFound,
-        serviceContextClassPresent: serviceContextClassPresent,
+        missingPrivateClasses: missingPrivateClasses,
         xpcSymbolsPresent: xpcSymbolsPresent,
         simulatorUDID: simulatorUDID,
         framebufferPortFound: framebufferPortFound,

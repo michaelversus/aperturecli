@@ -5,6 +5,9 @@ import Foundation
 struct SimulatorEnvironmentInspector {
     private static let coreSimulatorFallbackPath = "/Library/Developer/PrivateFrameworks/CoreSimulator.framework"
 
+    /// Private classes the playground calls into, which must exist once the frameworks have loaded.
+    private static let requiredPrivateClasses = ["SimServiceContext", "SimDevice", "SimDeviceSet", "SimDeviceIOClient"]
+
     let commandRunner: CommandRunning
     let environment: [String: String]
 
@@ -31,7 +34,7 @@ struct SimulatorEnvironmentInspector {
             coreSimulatorVersion: coreSimulator?.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
             coreSimulatorFound: coreSimulatorLoaded,
             simulatorKitFound: simulatorKitLoaded,
-            serviceContextClassPresent: NSClassFromString("SimServiceContext") != nil,
+            missingPrivateClasses: Self.requiredPrivateClasses.filter { NSClassFromString($0) == nil },
             xpcSymbolsPresent: Self.xpcSymbolsPresent(),
             simulatorUDID: udid,
             framebufferPortFound: nil,

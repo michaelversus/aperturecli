@@ -7,7 +7,7 @@ struct PlaygroundCommandExecutor {
         self.output = output
     }
 
-    /// Prints to standard output, as every spike command does.
+    /// Prints to standard output, as every playground command does.
     init(session: any SimulatorSession) {
         self.init(session: session, output: { Swift.print($0) })
     }

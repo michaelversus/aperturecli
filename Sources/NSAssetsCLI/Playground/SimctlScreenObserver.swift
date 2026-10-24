@@ -15,7 +15,7 @@ struct SimctlScreenObserver: SimulatorScreenObserving {
 
     func screenDigest() async throws -> String {
         let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("nsassets-spike-\(UUID().uuidString).png")
+            .appendingPathComponent("nsassets-playground-\(UUID().uuidString).png")
         defer { try? FileManager.default.removeItem(at: path) }
         _ = try commandRunner.run(
             executable: "/usr/bin/xcrun",
@@ -28,7 +28,7 @@ struct SimctlScreenObserver: SimulatorScreenObserving {
     /// The simulator's screen size in pixels, from the PNG that `simctl` writes.
     func screenSizeInPixels() throws -> (width: Int, height: Int) {
         let path = FileManager.default.temporaryDirectory
-            .appendingPathComponent("nsassets-spike-\(UUID().uuidString).png")
+            .appendingPathComponent("nsassets-playground-\(UUID().uuidString).png")
         defer { try? FileManager.default.removeItem(at: path) }
         _ = try commandRunner.run(
             executable: "/usr/bin/xcrun",

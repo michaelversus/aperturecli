@@ -2,27 +2,13 @@ import Foundation
 
 /// Consumes a session's frames for a fixed time and measures them, ignoring idle-floor replays.
 struct FrameCaptureRun {
-    struct Result {
-        let report: FrameRateReport
-        let averageJPEGKilobytes: Double
-        let sizeInPixels: String
-
-        var summary: String {
-            String(
-                format: "%d frames, %.1f fps, longest gap %.0f ms, avg %.0f KB JPEG, %@",
-                report.frameCount, report.framesPerSecond, report.longestGap * 1000,
-                averageJPEGKilobytes, sizeInPixels
-            )
-        }
-    }
-
     let seconds: Int
     let saveFirstFramePath: String?
 
-    func run(on session: any SimulatorSession) async throws -> Result {
+    func run(on session: any SimulatorSession) async throws -> FrameCaptureResult {
         let seconds = seconds
         let saveFirstFramePath = saveFirstFramePath
-        return try await withThrowingTaskGroup(of: Result?.self) { group in
+        return try await withThrowingTaskGroup(of: FrameCaptureResult?.self) { group in
             group.addTask {
                 var meter = FrameRateMeter()
                 var totalBytes = 0
@@ -40,18 +26,18 @@ struct FrameCaptureRun {
                 }
                 let report = meter.report()
                 let average = report.frameCount > 0 ? Double(totalBytes) / Double(report.frameCount) / 1024 : 0
-                return Result(report: report, averageJPEGKilobytes: average, sizeInPixels: size)
+                return FrameCaptureResult(report: report, averageJPEGKilobytes: average, sizeInPixels: size)
             }
             group.addTask {
                 try await Task.sleep(for: .seconds(seconds))
                 return nil
             }
 
-            var result: Result?
+            var result: FrameCaptureResult?
             for try await finished in group {
                 if let finished { result = finished } else { group.cancelAll() }
             }
-            return result ?? Result(
+            return result ?? FrameCaptureResult(
                 report: FrameRateMeter().report(),
                 averageJPEGKilobytes: 0,
                 sizeInPixels: "no frames"
