@@ -16,16 +16,12 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         init(connection: NWConnection) { self.connection = connection }
     }
 
-    /// Set from the listener's state handler, which runs on the server's serial queue.
-    private final class OnceFlag: @unchecked Sendable {
-        var isSet = false
-    }
-
     private let session: any SimulatorSession
     private let token: String
     private let verifier: SimulatorTapVerifier?
     private let output: @Sendable (String) -> Void
     private let requestedPort: UInt16
+    private let handshakeTimeout: Duration
     private let queue = DispatchQueue(label: "nsassets.playground.channel")
 
     // Confined to `queue`.
@@ -42,13 +38,15 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         token: String,
         verifier: SimulatorTapVerifier? = nil,
         output: @escaping @Sendable (String) -> Void = { _ in },
-        port: UInt16 = 0
+        port: UInt16 = 0,
+        handshakeTimeout: Duration = .seconds(5)
     ) {
         self.session = session
         self.token = token
         self.verifier = verifier
         self.output = output
         self.requestedPort = port
+        self.handshakeTimeout = handshakeTimeout
     }
 
     /// Starts listening on loopback, starts the frame pump, and returns the port actually bound.
@@ -61,15 +59,10 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             let accepted = self?.acceptedSubprotocol(offered: subprotocols, headers: headers)
             return NWProtocolWebSocket.Response(status: .accept, subprotocol: accepted)
         }
-        let parameters = NWParameters.tcp
-        parameters.defaultProtocolStack.applicationProtocols.insert(webSocketOptions, at: 0)
-        parameters.requiredLocalEndpoint = .hostPort(
-            host: "127.0.0.1",
-            port: NWEndpoint.Port(rawValue: requestedPort) ?? .any
-        )
-        let listener = try NWListener(using: parameters)
+        let listener = try LoopbackListener.make(port: requestedPort, webSocketOptions: webSocketOptions)
         listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
-        let port = try await bind(listener)
+        queue.async { [self] in self.listener = listener }
+        let port = try await LoopbackListener.start(listener, on: queue)
 
         let session = session
         pump = Task { [weak self] in
@@ -78,7 +71,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
                     self?.broadcast(frame.jpegData)
                 }
             } catch {
-                // A failed stream leaves clients on the last frame; the CLI prints nothing more here.
+                self?.output("The frame stream stopped: \(error.localizedDescription)")
             }
         }
         return port
@@ -128,27 +121,6 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         return metadata?.selectedSubprotocol == PlaygroundChannel.subprotocol(token: token)
     }
 
-    private func bind(_ listener: NWListener) async throws -> UInt16 {
-        try await withCheckedThrowingContinuation { continuation in
-            let finished = OnceFlag()
-            listener.stateUpdateHandler = { state in
-                guard !finished.isSet else { return }
-                switch state {
-                case .ready:
-                    finished.isSet = true
-                    continuation.resume(returning: listener.port?.rawValue ?? 0)
-                case let .failed(error):
-                    finished.isSet = true
-                    continuation.resume(throwing: error)
-                default:
-                    break
-                }
-            }
-            listener.start(queue: queue)
-            queue.async { [self] in self.listener = listener }
-        }
-    }
-
     // MARK: - Clients
 
     private func accept(_ connection: NWConnection) {
@@ -165,6 +137,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
                 clients[key] = client
                 sendText(.hello(), to: client)
                 receive(from: client)
+                closeUnlessHandshaken(client)
             case .failed, .cancelled:
                 clients[key] = nil
             default:
@@ -172,6 +145,15 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             }
         }
         connection.start(queue: queue)
+    }
+
+    /// An authorized client that never says hello would otherwise stay connected forever.
+    private func closeUnlessHandshaken(_ client: Client) {
+        let components = handshakeTimeout.components
+        let seconds = Double(components.seconds) + Double(components.attoseconds) / 1e18
+        queue.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            if !client.isHandshaken { self?.close(client) }
+        }
     }
 
     private func receive(from client: Client) {
@@ -200,8 +182,8 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     }
 
     private func completeHandshake(of client: Client, with message: PlaygroundClientMessage?) {
-        guard message?.type == "hello", message?.protocolVersion == PlaygroundChannel.protocolVersion else {
-            if message?.type == "hello" {
+        guard message?.type == .hello, message?.protocolVersion == PlaygroundChannel.protocolVersion else {
+            if message?.type == .hello {
                 sendText(.incompatible(clientProtocolVersion: message?.protocolVersion), to: client, thenClose: true)
             } else {
                 close(client)
@@ -213,14 +195,14 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     }
 
     private func perform(tap point: NormalizedPoint) async {
-        guard let verifier else {
-            try? await session.tap(at: point)
-            return
-        }
         do {
-            output(try await verifier.verify(tap: point, on: session).summary)
+            if let verifier {
+                output(try await verifier.verify(tap: point, on: session).summary)
+            } else {
+                try await session.tap(at: point)
+            }
         } catch {
-            output("Tap failed: \(error)")
+            output("Tap failed: \(error.localizedDescription)")
         }
     }
 

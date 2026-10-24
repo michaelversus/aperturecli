@@ -11,6 +11,7 @@ enum PlaygroundError: Error, Equatable {
     case connectionFailed(service: String)
     case hidDaemonUnresponsive(attempts: Int)
     case commandFailed(String)
+    case randomBytesUnavailable
 }
 
 extension PlaygroundError: LocalizedError {
@@ -36,6 +37,8 @@ extension PlaygroundError: LocalizedError {
             "The simulator's HID daemon did not answer after \(attempts) attempts."
         case let .commandFailed(message):
             message
+        case .randomBytesUnavailable:
+            "The system could not provide random bytes for the playground token."
         }
     }
 }

@@ -14,6 +14,10 @@ entry expression, the kind of component (SwiftUI view, or UIKit view or view con
 the app extracts that code is its own concern. The CLI builds it into one cached harness project per repository, regenerating
 a single entry file per component so later builds are incremental, and answers a failed build with structured diagnostics.
 
+A refused connection is accepted at the WebSocket level and closed at once without a frame, because the framework answers a
+true rejection without closing the socket and clients would hang. Only the hidden debug viewer's own origin is allowed as a
+browser origin.
+
 ## Considered Options
 
 - **Unix socket or XPC Mach service**: rejected because a sandboxed app needs extra file access or a temporary-exception

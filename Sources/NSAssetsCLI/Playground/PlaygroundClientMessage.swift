@@ -1,6 +1,13 @@
+import Foundation
+
 /// A text message from a connected client: a hello that names its protocol, or a tap.
 struct PlaygroundClientMessage: Decodable, Equatable {
-    let type: String
+    enum Kind: String, Decodable {
+        case hello
+        case tap
+    }
+
+    let type: Kind
     let protocolVersion: Int?
     let horizontal: Double?
     let vertical: Double?
@@ -14,7 +21,7 @@ struct PlaygroundClientMessage: Decodable, Equatable {
 
     /// The tap this message asks for, or `nil` for anything else, including taps outside the screen.
     var tapPoint: NormalizedPoint? {
-        guard type == "tap", let horizontal, let vertical,
+        guard type == .tap, let horizontal, let vertical,
               (0...1).contains(horizontal), (0...1).contains(vertical)
         else { return nil }
         return NormalizedPoint(horizontal: horizontal, vertical: vertical)

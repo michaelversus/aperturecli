@@ -1,6 +1,13 @@
+import Foundation
+
 /// A text message from the CLI to a connected client.
 struct PlaygroundServerMessage: Codable, Equatable {
-    let type: String
+    enum Kind: String, Codable {
+        case hello
+        case incompatible
+    }
+
+    let type: Kind
     let cliVersion: String?
     let protocolVersion: Int?
     let supportedProtocolVersion: Int?
@@ -8,7 +15,7 @@ struct PlaygroundServerMessage: Codable, Equatable {
 
     static func hello() -> PlaygroundServerMessage {
         PlaygroundServerMessage(
-            type: "hello",
+            type: .hello,
             cliVersion: version,
             protocolVersion: PlaygroundChannel.protocolVersion,
             supportedProtocolVersion: nil,
@@ -19,7 +26,7 @@ struct PlaygroundServerMessage: Codable, Equatable {
     static func incompatible(clientProtocolVersion: Int?) -> PlaygroundServerMessage {
         let client = clientProtocolVersion.map(String.init) ?? "none"
         return PlaygroundServerMessage(
-            type: "incompatible",
+            type: .incompatible,
             cliVersion: version,
             protocolVersion: nil,
             supportedProtocolVersion: PlaygroundChannel.protocolVersion,

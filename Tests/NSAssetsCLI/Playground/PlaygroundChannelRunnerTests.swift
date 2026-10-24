@@ -68,7 +68,7 @@ struct PlaygroundChannelRunnerTests {
         let viewerReady = PortSignal()
         let (runner, _) = makeRunner(
             poster: MockDistributedNotificationPoster(),
-            debugViewer: PlaygroundDebugViewer(httpPort: 0),
+            debugViewer: PlaygroundDebugViewer(),
             onReady: { ready.set($0) },
             onDebugViewerReady: { viewerReady.set($0) }
         )
@@ -129,20 +129,4 @@ struct PlaygroundChannelRunnerTests {
         request.setValue(PlaygroundChannel.subprotocol(token: token), forHTTPHeaderField: "Sec-WebSocket-Protocol")
         return request
     }
-}
-
-private final class PortSignal: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: UInt16?
-    var port: UInt16? { lock.withLock { value } }
-    func set(_ port: UInt16) { lock.withLock { value = port } }
-}
-
-private func waitForValue<T>(timeout: Duration = .seconds(3), _ read: () -> T?) async -> T? {
-    let deadline = ContinuousClock.now + timeout
-    while ContinuousClock.now < deadline {
-        if let value = read() { return value }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-    return nil
 }

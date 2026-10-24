@@ -6,7 +6,7 @@ enum PlaygroundTokenGenerator {
     static func make() throws -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else {
-            throw PlaygroundError.commandFailed("Could not generate a random token.")
+            throw PlaygroundError.randomBytesUnavailable
         }
         return bytes.map { String(format: "%02x", $0) }.joined()
     }

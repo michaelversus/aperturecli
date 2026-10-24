@@ -3,17 +3,13 @@ import Network
 
 /// Serves the debug viewer page over HTTP on loopback. Its origin is the only browser origin the channel allows.
 final class PlaygroundDebugViewer: @unchecked Sendable {
-    /// Set from the listener's state handler, which runs on the viewer's serial queue.
-    private final class OnceFlag: @unchecked Sendable {
-        var isSet = false
-    }
-
     private let requestedPort: UInt16
     private let queue = DispatchQueue(label: "nsassets.playground.debug-viewer")
     private var listener: NWListener?
 
-    init(httpPort: UInt16 = 8787) {
-        self.requestedPort = httpPort
+    /// `port` 0 picks a free port.
+    init(port: UInt16 = 0) {
+        self.requestedPort = port
     }
 
     static func origin(port: UInt16) -> String {
@@ -23,14 +19,10 @@ final class PlaygroundDebugViewer: @unchecked Sendable {
     /// Starts serving a page that connects to the channel on `webSocketPort` with `token`, and returns the HTTP port.
     func start(webSocketPort: UInt16, token: String) async throws -> UInt16 {
         let page = PlaygroundDebugViewerPage.html(webSocketPort: webSocketPort, token: token)
-        let parameters = NWParameters.tcp
-        parameters.requiredLocalEndpoint = .hostPort(
-            host: "127.0.0.1",
-            port: NWEndpoint.Port(rawValue: requestedPort) ?? .any
-        )
-        let listener = try NWListener(using: parameters)
+        let listener = try LoopbackListener.make(port: requestedPort)
         listener.newConnectionHandler = { [weak self] connection in self?.serve(page: page, on: connection) }
-        return try await bind(listener)
+        queue.async { [self] in self.listener = listener }
+        return try await LoopbackListener.start(listener, on: queue)
     }
 
     func stop() async {
@@ -40,27 +32,6 @@ final class PlaygroundDebugViewer: @unchecked Sendable {
                 listener = nil
                 continuation.resume()
             }
-        }
-    }
-
-    private func bind(_ listener: NWListener) async throws -> UInt16 {
-        try await withCheckedThrowingContinuation { continuation in
-            let finished = OnceFlag()
-            listener.stateUpdateHandler = { state in
-                guard !finished.isSet else { return }
-                switch state {
-                case .ready:
-                    finished.isSet = true
-                    continuation.resume(returning: listener.port?.rawValue ?? 0)
-                case let .failed(error):
-                    finished.isSet = true
-                    continuation.resume(throwing: error)
-                default:
-                    break
-                }
-            }
-            listener.start(queue: queue)
-            queue.async { [self] in self.listener = listener }
         }
     }
 

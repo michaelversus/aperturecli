@@ -19,7 +19,7 @@ struct PlaygroundChannelServerTests {
 
         let hello = try await receiveMessage(from: client)
 
-        #expect(hello.type == "hello")
+        #expect(hello.type == .hello)
         #expect(hello.protocolVersion == PlaygroundChannel.protocolVersion)
         #expect(hello.cliVersion == version)
         client.cancel(with: .goingAway, reason: nil)
@@ -49,7 +49,7 @@ struct PlaygroundChannelServerTests {
         let (server, port) = try await makeServer()
         let control = connect(port: port, token: token)
         let controlHello = try await receiveMessage(from: control)
-        #expect(controlHello.type == "hello")
+        #expect(controlHello.type == .hello)
         control.cancel(with: .goingAway, reason: nil)
 
         let browser = connect(port: port, token: token, origin: "http://evil.example")
@@ -66,7 +66,7 @@ struct PlaygroundChannelServerTests {
 
         let hello = try await receiveMessage(from: client)
 
-        #expect(hello.type == "hello")
+        #expect(hello.type == .hello)
         client.cancel(with: .goingAway, reason: nil)
         await server.stop()
     }
@@ -81,7 +81,7 @@ struct PlaygroundChannelServerTests {
         try await client.send(.string(#"{"type":"hello","protocolVersion":999}"#))
         let reply = try await receiveMessage(from: client)
 
-        #expect(reply.type == "incompatible")
+        #expect(reply.type == .incompatible)
         #expect(reply.supportedProtocolVersion == PlaygroundChannel.protocolVersion)
         #expect(reply.reason?.contains("999") == true)
         await #expect(throws: (any Error).self) { try await client.receive() }
@@ -166,6 +166,30 @@ struct PlaygroundChannelServerTests {
     }
 
     @Test
+    func anAuthorizedClientThatNeverSaysHelloIsDisconnected() async throws {
+        let (server, port) = try await makeServer(handshakeTimeout: .milliseconds(200))
+        let client = connect(port: port, token: token)
+        _ = try await receiveMessage(from: client)
+
+        await #expect(throws: (any Error).self) { try await client.receive() }
+        await server.stop()
+    }
+
+    @Test
+    func aTapThatFailsIsReportedInsteadOfSwallowed() async throws {
+        let session = MockSimulatorSession(probeResult: supportedProbe, tapError: PlaygroundError.sessionNotStarted)
+        let output = OutputRecorder()
+        let (server, port) = try await makeServer(session: session, output: output.record)
+        let client = try await handshake(port: port)
+
+        try await client.send(.string(#"{"type":"tap","x":0.5,"y":0.5}"#))
+
+        #expect(await waitUntil { output.text.contains("Tap failed") })
+        client.cancel(with: .goingAway, reason: nil)
+        await server.stop()
+    }
+
+    @Test
     func theServerKeepsServingAfterAClientDisconnects() async throws {
         let (server, port) = try await makeServer()
         let first = try await handshake(port: port)
@@ -174,7 +198,7 @@ struct PlaygroundChannelServerTests {
         let second = connect(port: port, token: token)
         let hello = try await receiveMessage(from: second)
 
-        #expect(hello.type == "hello")
+        #expect(hello.type == .hello)
         second.cancel(with: .goingAway, reason: nil)
         await server.stop()
     }
@@ -188,14 +212,16 @@ struct PlaygroundChannelServerTests {
     private func makeServer(
         session: MockSimulatorSession? = nil,
         verifier: SimulatorTapVerifier? = nil,
-        output: @escaping @Sendable (String) -> Void = { _ in }
+        output: @escaping @Sendable (String) -> Void = { _ in },
+        handshakeTimeout: Duration = .seconds(5)
     ) async throws -> (PlaygroundChannelServer, UInt16) {
         let server = PlaygroundChannelServer(
             session: session ?? makeSession(),
             token: token,
             verifier: verifier,
             output: output,
-            port: 0
+            port: 0,
+            handshakeTimeout: handshakeTimeout
         )
         return (server, try await server.start())
     }
@@ -230,20 +256,4 @@ struct PlaygroundChannelServerTests {
     private var supportedProbe: SimulatorProbeResult {
         SimulatorProbeResult(status: .supported, xcodeVersion: "27.1", coreSimulatorVersion: "1155.4", issues: [])
     }
-}
-
-private final class OutputRecorder: @unchecked Sendable {
-    private let lock = NSLock()
-    private var lines: [String] = []
-    var text: String { lock.withLock { lines.joined(separator: "\n") } }
-    func record(_ line: String) { lock.withLock { lines.append(line) } }
-}
-
-private func waitUntil(timeout: Duration = .seconds(3), _ condition: () async -> Bool) async -> Bool {
-    let deadline = ContinuousClock.now + timeout
-    while ContinuousClock.now < deadline {
-        if await condition() { return true }
-        try? await Task.sleep(for: .milliseconds(20))
-    }
-    return false
 }

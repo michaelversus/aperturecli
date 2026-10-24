@@ -17,6 +17,14 @@ _Avoid_: preview, live preview
 The small generated app that hosts one component in the simulator, rebuilt from the code the app sends.
 _Avoid_: host app, preview app
 
+**Playground channel**:
+The authenticated connection over which NSAssets Studio receives a simulator's frames and sends taps to the CLI.
+_Avoid_: socket, stream, link
+
+**Announcement**:
+The notification through which the CLI tells NSAssets Studio where and how to connect to the playground channel.
+_Avoid_: broadcast, handshake (the handshake is the first exchange on the channel)
+
 **Simulator session**:
 One live connection to one explicitly chosen simulator, through which frames arrive and input is sent.
 _Avoid_: stream, connection

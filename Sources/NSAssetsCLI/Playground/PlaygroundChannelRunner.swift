@@ -28,11 +28,7 @@ struct PlaygroundChannelRunner {
         poster.post(name: PlaygroundChannel.notificationName, userInfo: announcement.userInfo)
         onReady(port)
 
-        do {
-            try await Task.sleep(for: .seconds(60 * 60 * 24 * 365))
-        } catch {
-            // Cancellation is the normal way to end serving.
-        }
+        await waitUntilCancelled()
         await debugViewer?.stop()
         await server.stop()
     }
