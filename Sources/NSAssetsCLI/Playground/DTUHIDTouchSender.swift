@@ -16,6 +16,9 @@ final class DTUHIDTouchSender: @unchecked Sendable {
     private static let replyTail = Duration.milliseconds(200)
     private static let drain = Duration.milliseconds(80)
 
+    private static let keyDownState: UInt64 = 1
+    private static let keyUpState: UInt64 = 0
+
     private let connection: XPCServiceConnection
 
     private init(connection: XPCServiceConnection) {
@@ -54,6 +57,15 @@ final class DTUHIDTouchSender: @unchecked Sendable {
         xpc_dictionary_set_uint64(payload, "target", 0)
 
         connection.send(Self.message(type: "IndigoDigitizerEvent", barrier: false, payload: payload))
+        await connection.sendBarrier()
+    }
+
+    func sendKey(usage: UInt64, isDown: Bool) async throws {
+        let payload = xpc_dictionary_create(nil, nil, 0)
+        xpc_dictionary_set_uint64(payload, "usageCode", usage)
+        xpc_dictionary_set_uint64(payload, "state", isDown ? Self.keyDownState : Self.keyUpState)
+
+        connection.send(Self.message(type: "IndigoKeyboardButtonEvent", barrier: false, payload: payload))
         await connection.sendBarrier()
     }
 

@@ -22,6 +22,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     private let output: @Sendable (String) -> Void
     private let tapRunner: PlaygroundTapRunner
     private let touchRunner: PlaygroundTouchRunner
+    private let keyboardRunner: PlaygroundKeyboardRunner
     // Taps and gestures run one after another, because verifying a tap compares screens before and after it.
     private let taps = SerialTaskQueue()
     private let requestedPort: UInt16
@@ -51,6 +52,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         self.output = output
         self.tapRunner = PlaygroundTapRunner(session: session, verifier: verifier, output: output)
         self.touchRunner = PlaygroundTouchRunner(session: session, output: output)
+        self.keyboardRunner = PlaygroundKeyboardRunner(session: session, output: output)
         self.requestedPort = port
         self.handshakeTimeout = handshakeTimeout
     }
@@ -147,7 +149,11 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             case .failed, .cancelled:
                 clients[key] = nil
                 let touchRunner = touchRunner
-                taps.enqueue { await touchRunner.release(owner: key) }
+                let keyboardRunner = keyboardRunner
+                taps.enqueue {
+                    await touchRunner.release(owner: key)
+                    await keyboardRunner.release(owner: key)
+                }
             default:
                 break
             }
@@ -189,6 +195,12 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             let touchRunner = touchRunner
             let owner = ObjectIdentifier(client)
             taps.enqueue { await touchRunner.run(touch, from: owner) }
+            return
+        }
+        if let press = message.keyPress {
+            let keyboardRunner = keyboardRunner
+            let owner = ObjectIdentifier(client)
+            taps.enqueue { await keyboardRunner.run(press, from: owner) }
             return
         }
         guard let point = message.tapPoint else { return }
