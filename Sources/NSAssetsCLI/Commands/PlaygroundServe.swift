@@ -17,18 +17,24 @@ extension NSAssetsCLI.Playground {
         @Flag(name: .long, help: "Check every tap by comparing screens and the guest log. Adds seconds to each tap.")
         var verifyTaps = false
 
+        @Flag(name: .long, help: .hidden)
+        var showMockComponent = false
+
         func run() async throws {
             let token = try PlaygroundTokenGenerator.make()
             let session = LiveSimulatorSession(udid: udid)
             let verifier = verifyTaps
                 ? SimulatorTapVerifier(observer: SimctlScreenObserver(udid: udid), settleDuration: .milliseconds(800))
                 : nil
+            let presenter = makePresenter()
             let server = PlaygroundChannelServer(
                 session: session,
                 token: token,
                 verifier: verifier,
+                componentPresenter: presenter,
                 output: { Swift.print($0) }
             )
+            let showMock = showMockComponent
             let runner = PlaygroundChannelRunner(
                 server: server,
                 token: token,
@@ -36,7 +42,11 @@ extension NSAssetsCLI.Playground {
                 workingDirectory: FileManager.default.currentDirectoryPath,
                 poster: DistributedNotificationPoster(),
                 debugViewer: debugViewer ? PlaygroundDebugViewer() : nil,
-                onReady: { Swift.print("Playground ready on 127.0.0.1:\($0). Press Ctrl-C to stop.") },
+                onReady: { port in
+                    Swift.print("Playground ready on 127.0.0.1:\(port). Press Ctrl-C to stop.")
+                    guard showMock else { return }
+                    server.present(.mock) { Swift.print("Mock component: \($0.summary)") }
+                },
                 onDebugViewerReady: { Swift.print("Debug viewer: http://127.0.0.1:\($0)/") }
             )
 
@@ -55,6 +65,30 @@ extension NSAssetsCLI.Playground {
             defer { stopSignals.forEach { $0.cancel() } }
 
             try await serving.value
+        }
+
+        /// Builds the harness under the user's caches for this repository, and drives this simulator's harness app.
+        private func makePresenter() -> PlaygroundComponentPresenter {
+            let fileSystem = FileSystem()
+            let udid = udid
+            let harnessDirectory = HarnessCacheLocator.directory(
+                forWorkingDirectory: FileManager.default.currentDirectoryPath,
+                libraryDirectory: fileSystem.libraryDirectory()
+            )
+            return PlaygroundComponentPresenter(
+                builder: HarnessBuilder(
+                    fileSystem: fileSystem,
+                    commandRunner: SubprocessRunner(),
+                    harnessDirectory: harnessDirectory
+                ),
+                controller: SimctlHarnessController(udid: udid, commandRunner: SubprocessRunner()),
+                resolveTarget: { try HarnessTargetResolver(commandRunner: SubprocessRunner(), udid: udid).resolve() },
+                importDiagnostics: { source, target in
+                    let modules = HarnessSDKModules(sdkPath: target.sdkPath, fileSystem: FileSystem())
+                    return HarnessImportChecker(isSystemModule: modules.isSystemModule).diagnostics(forSource: source)
+                },
+                output: { Swift.print($0) }
+            )
         }
     }
 }

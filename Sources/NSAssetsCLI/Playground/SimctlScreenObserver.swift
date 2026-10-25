@@ -18,7 +18,7 @@ struct SimctlScreenObserver: SimulatorScreenObserving {
             .appendingPathComponent("nsassets-playground-\(UUID().uuidString).png")
         defer { try? FileManager.default.removeItem(at: path) }
         _ = try commandRunner.run(
-            executable: "/usr/bin/xcrun",
+            executable: ExternalTools.xcrun,
             arguments: ["simctl", "io", udid, "screenshot", "--type=png", path.path]
         )
         let data = try Data(contentsOf: path)
@@ -31,7 +31,7 @@ struct SimctlScreenObserver: SimulatorScreenObserving {
             .appendingPathComponent("nsassets-playground-\(UUID().uuidString).png")
         defer { try? FileManager.default.removeItem(at: path) }
         _ = try commandRunner.run(
-            executable: "/usr/bin/xcrun",
+            executable: ExternalTools.xcrun,
             arguments: ["simctl", "io", udid, "screenshot", "--type=png", path.path]
         )
         guard let source = CGImageSourceCreateWithURL(path as CFURL, nil),
@@ -45,7 +45,7 @@ struct SimctlScreenObserver: SimulatorScreenObserving {
     func droppedEventLogLines(since start: Date) async throws -> [String] {
         let seconds = max(2, Int(Date().timeIntervalSince(start).rounded(.up)) + 1)
         let output = try commandRunner.run(
-            executable: "/usr/bin/xcrun",
+            executable: ExternalTools.xcrun,
             arguments: [
                 "simctl", "spawn", udid, "log", "show", "--style", "compact", "--last", "\(seconds)s",
                 "--predicate", Self.droppedEventPredicate

@@ -12,6 +12,7 @@ enum PlaygroundError: Error, Equatable {
     case hidDaemonUnresponsive(attempts: Int)
     case commandFailed(String)
     case randomBytesUnavailable
+    case unsupportedPlatform(String)
 }
 
 extension PlaygroundError: LocalizedError {
@@ -37,6 +38,8 @@ extension PlaygroundError: LocalizedError {
             "The simulator's HID daemon did not answer after \(attempts) attempts."
         case let .commandFailed(message):
             message
+        case let .unsupportedPlatform(runtime):
+            "The playground only supports iOS simulators, but this one runs \(runtime)."
         case .randomBytesUnavailable:
             "The system could not provide random bytes for the playground token."
         }

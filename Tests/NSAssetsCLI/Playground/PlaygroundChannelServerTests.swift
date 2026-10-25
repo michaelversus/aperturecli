@@ -2,8 +2,7 @@ import Foundation
 import Testing
 @testable import NSAssetsCLI
 
-struct PlaygroundChannelServerTests {
-    private let token = "secret-token"
+struct PlaygroundChannelServerTests: PlaygroundChannelTesting {
     private let frame = SimulatorFrame(
         jpegData: Data([0xFF, 0xD8, 0x01, 0x02]),
         widthInPixels: 10,
@@ -201,59 +200,5 @@ struct PlaygroundChannelServerTests {
         #expect(hello.type == .hello)
         second.cancel(with: .goingAway, reason: nil)
         await server.stop()
-    }
-
-    // MARK: - Helpers
-
-    private func makeSession(frames: [SimulatorFrame] = []) -> MockSimulatorSession {
-        MockSimulatorSession(probeResult: supportedProbe, framesToEmit: frames)
-    }
-
-    private func makeServer(
-        session: MockSimulatorSession? = nil,
-        verifier: SimulatorTapVerifier? = nil,
-        output: @escaping @Sendable (String) -> Void = { _ in },
-        handshakeTimeout: Duration = .seconds(5)
-    ) async throws -> (PlaygroundChannelServer, UInt16) {
-        let server = PlaygroundChannelServer(
-            session: session ?? makeSession(),
-            token: token,
-            verifier: verifier,
-            output: output,
-            port: 0,
-            handshakeTimeout: handshakeTimeout
-        )
-        return (server, try await server.start())
-    }
-
-    private func connect(port: UInt16, token: String?, origin: String? = nil) -> URLSessionWebSocketTask {
-        var request = URLRequest(url: URL(string: "ws://127.0.0.1:\(port)")!)
-        if let token {
-            request.setValue(PlaygroundChannel.subprotocol(token: token), forHTTPHeaderField: "Sec-WebSocket-Protocol")
-        }
-        if let origin { request.setValue(origin, forHTTPHeaderField: "Origin") }
-        let task = URLSession.shared.webSocketTask(with: request)
-        task.resume()
-        return task
-    }
-
-    /// Connects, reads the server hello and answers with a compatible hello.
-    private func handshake(port: UInt16) async throws -> URLSessionWebSocketTask {
-        let client = connect(port: port, token: token)
-        _ = try await receiveMessage(from: client)
-        let hello = #"{"type":"hello","protocolVersion":\#(PlaygroundChannel.protocolVersion)}"#
-        try await client.send(.string(hello))
-        return client
-    }
-
-    private func receiveMessage(from client: URLSessionWebSocketTask) async throws -> PlaygroundServerMessage {
-        guard case let .string(text) = try await client.receive() else {
-            throw CocoaError(.fileReadCorruptFile)
-        }
-        return try JSONDecoder().decode(PlaygroundServerMessage.self, from: Data(text.utf8))
-    }
-
-    private var supportedProbe: SimulatorProbeResult {
-        SimulatorProbeResult(status: .supported, xcodeVersion: "27.1", coreSimulatorVersion: "1155.4", issues: [])
     }
 }

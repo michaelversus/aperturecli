@@ -18,8 +18,11 @@ final class PlaygroundChannelServer: @unchecked Sendable {
 
     private let session: any SimulatorSession
     private let token: String
-    private let verifier: SimulatorTapVerifier?
+    private let componentHandler: PlaygroundComponentRequestHandler
     private let output: @Sendable (String) -> Void
+    private let tapRunner: PlaygroundTapRunner
+    // Taps run one after another, because verifying one compares screens before and after it.
+    private let taps = SerialTaskQueue()
     private let requestedPort: UInt16
     private let handshakeTimeout: Duration
     private let queue = DispatchQueue(label: "nsassets.playground.channel")
@@ -30,21 +33,22 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     private var allowedOrigins: Set<String> = []
     private var latestFrame: Data?
     private var pump: Task<Void, Never>?
-    private var lastTap: Task<Void, Never>?
 
     /// With a `verifier`, every tap is checked and its outcome is sent to `output`.
     init(
         session: any SimulatorSession,
         token: String,
         verifier: SimulatorTapVerifier? = nil,
+        componentPresenter: (any PlaygroundComponentPresenting)? = nil,
         output: @escaping @Sendable (String) -> Void = { _ in },
         port: UInt16 = 0,
         handshakeTimeout: Duration = .seconds(5)
     ) {
         self.session = session
         self.token = token
-        self.verifier = verifier
+        self.componentHandler = PlaygroundComponentRequestHandler(presenter: componentPresenter)
         self.output = output
+        self.tapRunner = PlaygroundTapRunner(session: session, verifier: verifier, output: output)
         self.requestedPort = port
         self.handshakeTimeout = handshakeTimeout
     }
@@ -135,7 +139,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
                     return
                 }
                 clients[key] = client
-                sendText(.hello(), to: client)
+                sendJSON(PlaygroundServerMessage.hello(), to: client)
                 receive(from: client)
                 closeUnlessHandshaken(client)
             case .failed, .cancelled:
@@ -172,19 +176,39 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             completeHandshake(of: client, with: message)
             return
         }
-        guard let point = message?.tapPoint else { return }
-        // Taps run one after another, because verifying one compares screens before and after it.
-        let previous = lastTap
-        lastTap = Task { [self] in
-            await previous?.value
-            await perform(tap: point)
+        guard let message else { return }
+        if message.type == .showComponent {
+            handleComponentRequest(text, from: client)
+            return
         }
+        guard let point = message.tapPoint else { return }
+        let tapRunner = tapRunner
+        taps.enqueue { await tapRunner.run(point) }
+    }
+
+    private func handleComponentRequest(_ text: Data, from client: Client) {
+        componentHandler.handle(text) { [weak self] status in
+            guard let self else { return }
+            queue.async { self.sendJSON(status, to: client) }
+        }
+    }
+
+    /// Presents a component without a client asking for it, in line with the requests clients send.
+    func present(
+        _ request: PlaygroundComponentRequest,
+        report: @escaping @Sendable (PlaygroundComponentStatus) -> Void
+    ) {
+        componentHandler.present(request, reply: report)
     }
 
     private func completeHandshake(of client: Client, with message: PlaygroundClientMessage?) {
         guard message?.type == .hello, message?.protocolVersion == PlaygroundChannel.protocolVersion else {
             if message?.type == .hello {
-                sendText(.incompatible(clientProtocolVersion: message?.protocolVersion), to: client, thenClose: true)
+                sendJSON(
+                    PlaygroundServerMessage.incompatible(clientProtocolVersion: message?.protocolVersion),
+                    to: client,
+                    thenClose: true
+                )
             } else {
                 close(client)
             }
@@ -192,18 +216,6 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         }
         client.isHandshaken = true
         if let latestFrame { send(latestFrame, to: client) }
-    }
-
-    private func perform(tap point: NormalizedPoint) async {
-        do {
-            if let verifier {
-                output(try await verifier.verify(tap: point, on: session).summary)
-            } else {
-                try await session.tap(at: point)
-            }
-        } catch {
-            output("Tap failed: \(error.localizedDescription)")
-        }
     }
 
     // MARK: - Sending
@@ -232,7 +244,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         )
     }
 
-    private func sendText(_ message: PlaygroundServerMessage, to client: Client, thenClose: Bool = false) {
+    private func sendJSON(_ message: some Encodable, to client: Client, thenClose: Bool = false) {
         guard let data = try? JSONEncoder().encode(message) else { return }
         let context = NWConnection.ContentContext(
             identifier: "text",
