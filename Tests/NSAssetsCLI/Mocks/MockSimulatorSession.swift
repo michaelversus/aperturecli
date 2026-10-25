@@ -14,15 +14,18 @@ actor MockSimulatorSession: SimulatorSession {
     private let probeResult: SimulatorProbeResult
     private let framesToEmit: [SimulatorFrame]
     private let startError: (any Error)?
+    private let tapError: (any Error)?
 
     init(
         probeResult: SimulatorProbeResult,
         framesToEmit: [SimulatorFrame] = [],
-        startError: (any Error)? = nil
+        startError: (any Error)? = nil,
+        tapError: (any Error)? = nil
     ) {
         self.probeResult = probeResult
         self.framesToEmit = framesToEmit
         self.startError = startError
+        self.tapError = tapError
     }
 
     func probe() async -> SimulatorProbeResult {
@@ -45,6 +48,7 @@ actor MockSimulatorSession: SimulatorSession {
 
     func tap(at point: NormalizedPoint) async throws {
         calls.append(.tap(point))
+        if let tapError { throw tapError }
     }
 
     func stop() async {

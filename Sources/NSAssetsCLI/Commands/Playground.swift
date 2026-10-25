@@ -6,7 +6,7 @@ extension NSAssetsCLI {
         static let configuration = CommandConfiguration(
             commandName: "playground",
             abstract: "Live simulator playground commands",
-            subcommands: [Probe.self, Tap.self, Frames.self]
+            subcommands: [Probe.self, Serve.self, Tap.self, Frames.self]
         )
     }
 }

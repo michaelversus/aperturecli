@@ -84,12 +84,6 @@ struct PlaygroundCommandExecutorTests {
     }
 }
 
-private final class OutputRecorder: @unchecked Sendable {
-    private(set) var lines: [String] = []
-    var text: String { lines.joined(separator: "\n") }
-    func record(_ line: String) { lines.append(line) }
-}
-
 private func makeResult(
     status: SimulatorProbeStatus,
     issues: [SimulatorProbeIssue]
