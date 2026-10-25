@@ -78,6 +78,11 @@ actor LiveSimulatorSession: SimulatorSession {
         try await touchSender.send(phase, at: point)
     }
 
+    func key(usage: UInt64, isDown: Bool) async throws {
+        guard let touchSender else { throw PlaygroundError.sessionNotStarted }
+        try await touchSender.sendKey(usage: usage, isDown: isDown)
+    }
+
     func stop() async {
         await touchSender?.disconnect()
         touchSender = nil

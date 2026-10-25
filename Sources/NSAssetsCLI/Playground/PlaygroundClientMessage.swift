@@ -7,6 +7,7 @@ struct PlaygroundClientMessage: Decodable, Equatable {
         case hello
         case tap
         case touch
+        case key
         case showComponent
     }
 
@@ -15,11 +16,13 @@ struct PlaygroundClientMessage: Decodable, Equatable {
     let horizontal: Double?
     let vertical: Double?
     let phase: String?
+    let code: String?
 
     enum CodingKeys: String, CodingKey {
         case type
         case protocolVersion
         case phase
+        case code
         case horizontal = "x"
         case vertical = "y"
     }
@@ -33,6 +36,16 @@ struct PlaygroundClientMessage: Decodable, Equatable {
     var touch: PlaygroundTouch? {
         guard type == .touch, let screenPoint, let phase = phase.flatMap(Self.touchPhase(named:)) else { return nil }
         return PlaygroundTouch(phase: phase, point: screenPoint)
+    }
+
+    /// The key press this message asks for, or `nil` for anything else, including keys this CLI does not know.
+    var keyPress: PlaygroundKeyPress? {
+        guard type == .key, let usage = code.flatMap(HIDKeyboardUsage.usage(forDOMCode:)) else { return nil }
+        switch phase {
+        case "down": return PlaygroundKeyPress(usage: usage, isDown: true)
+        case "up": return PlaygroundKeyPress(usage: usage, isDown: false)
+        default: return nil
+        }
     }
 
     private var screenPoint: NormalizedPoint? {
