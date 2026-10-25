@@ -8,8 +8,11 @@ extension NSAssetsCLI.Playground {
             abstract: "Serve a simulator to NSAssets Studio until stopped"
         )
 
-        @Option(name: .long, help: "UDID of the booted simulator to serve. Never defaults to a booted one.")
-        var udid: String
+        @Option(
+            name: .long,
+            help: "UDID of the booted simulator to serve. Defaults to the one booted simulator .nsassets.json asks for."
+        )
+        var udid: String?
 
         @Flag(name: .long, help: .hidden)
         var debugViewer = false
@@ -21,12 +24,17 @@ extension NSAssetsCLI.Playground {
         var showMockComponent = false
 
         func run() async throws {
+            let udid = try udid ?? ConfiguredSimulatorResolver(
+                configLoader: NSAssetsConfigLoader(fileSystem: FileSystem()),
+                commandRunner: SubprocessRunner(),
+                workingDirectory: FileManager.default.currentDirectoryPath
+            ).resolve()
             let token = try PlaygroundTokenGenerator.make()
             let session = LiveSimulatorSession(udid: udid)
             let verifier = verifyTaps
                 ? SimulatorTapVerifier(observer: SimctlScreenObserver(udid: udid), settleDuration: .milliseconds(800))
                 : nil
-            let presenter = makePresenter()
+            let presenter = makePresenter(udid: udid)
             let server = PlaygroundChannelServer(
                 session: session,
                 token: token,
@@ -68,9 +76,8 @@ extension NSAssetsCLI.Playground {
         }
 
         /// Builds the harness under the user's caches for this repository, and drives this simulator's harness app.
-        private func makePresenter() -> PlaygroundComponentPresenter {
+        private func makePresenter(udid: String) -> PlaygroundComponentPresenter {
             let fileSystem = FileSystem()
-            let udid = udid
             let harnessDirectory = HarnessCacheLocator.directory(
                 forWorkingDirectory: FileManager.default.currentDirectoryPath,
                 libraryDirectory: fileSystem.libraryDirectory()
