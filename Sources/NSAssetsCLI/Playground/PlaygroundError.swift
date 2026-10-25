@@ -13,6 +13,8 @@ enum PlaygroundError: Error, Equatable {
     case commandFailed(String)
     case randomBytesUnavailable
     case unsupportedPlatform(String)
+    case noMatchingSimulator(model: String, iosVersion: String)
+    case ambiguousSimulators(model: String, iosVersion: String, udids: [String])
 }
 
 extension PlaygroundError: LocalizedError {
@@ -40,6 +42,11 @@ extension PlaygroundError: LocalizedError {
             message
         case let .unsupportedPlatform(runtime):
             "The playground only supports iOS simulators, but this one runs \(runtime)."
+        case let .noMatchingSimulator(model, iosVersion):
+            "No booted simulator matches .nsassets.json (\(model), iOS \(iosVersion)). Boot one, or pass --udid."
+        case let .ambiguousSimulators(model, iosVersion, udids):
+            "Several booted simulators match .nsassets.json (\(model), iOS \(iosVersion)): "
+                + "\(udids.joined(separator: ", ")). Pass --udid to choose one."
         case .randomBytesUnavailable:
             "The system could not provide random bytes for the playground token."
         }
