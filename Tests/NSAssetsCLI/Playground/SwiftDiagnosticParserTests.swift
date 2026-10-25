@@ -2,7 +2,7 @@ import Testing
 @testable import NSAssetsCLI
 
 struct SwiftDiagnosticParserTests {
-    private let parser = SwiftDiagnosticParser(entryFirstLine: 7)
+    private let parser = SwiftDiagnosticParser(entryFirstLine: 7, entryLineCount: 3)
 
     @Test
     func anErrorInTheComponentKeepsTheLineOfTheCodeThatWasSent() throws {
@@ -28,10 +28,23 @@ struct SwiftDiagnosticParserTests {
     }
 
     @Test
-    func anErrorBeforeTheExpressionIsClampedToTheFirstLine() throws {
-        let output = "/cache/Sources/PlaygroundEntry.swift:3:1: error: something in the generated wrapper"
+    func anErrorOnTheLastLineOfTheExpressionIsStillTheEntry() throws {
+        let output = "/cache/Sources/PlaygroundEntry.swift:9:1: error: unexpected token"
 
-        #expect(try #require(parser.parse(output).first).line == 1)
+        let diagnostic = try #require(parser.parse(output).first)
+
+        #expect(diagnostic.file == .entry)
+        #expect(diagnostic.line == 3)
+    }
+
+    @Test(arguments: [3, 6, 10, 11])
+    func anErrorInTheGeneratedWrapperIsTheHarnessNotAnEntryLine(line: Int) throws {
+        let output = "/cache/Sources/PlaygroundEntry.swift:\(line):1: error: something in the generated wrapper"
+
+        let diagnostic = try #require(parser.parse(output).first)
+
+        #expect(diagnostic.file == .harness)
+        #expect(diagnostic.line == line)
     }
 
     @Test

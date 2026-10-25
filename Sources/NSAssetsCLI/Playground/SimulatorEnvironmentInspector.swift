@@ -48,7 +48,7 @@ struct SimulatorEnvironmentInspector {
     /// Only readable while the simulator is booted; `nil` when it cannot be read.
     private func deviceHubFlagActive(udid: String) -> Bool? {
         let output = try? commandRunner.run(
-            executable: "/usr/bin/xcrun",
+            executable: ExternalTools.xcrun,
             arguments: ["simctl", "spawn", udid, "notifyutil", "-g", "com.apple.coredevice.dtuhidd.active"]
         )
         guard let value = output?.split(separator: " ").last?.trimmingCharacters(in: .whitespacesAndNewlines),

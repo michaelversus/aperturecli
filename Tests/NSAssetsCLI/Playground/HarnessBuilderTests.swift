@@ -37,6 +37,65 @@ struct HarnessBuilderTests {
     }
 
     @Test
+    func theFixedAppSourceAndBundleDescriptionAreNotRewrittenWhenUnchanged() throws {
+        let plist = HarnessSourceGenerator.infoPlist(minimumOSVersion: "27.0")
+        let fileSystem = MockFileSystem(
+            existingPaths: ["/cache/h1/Sources/HarnessApp.swift", "/cache/h1/Harness.app/Info.plist"],
+            fileContentsByPath: [
+                "/cache/h1/Sources/HarnessApp.swift": HarnessSourceGenerator.appSource,
+                "/cache/h1/Harness.app/Info.plist": plist
+            ]
+        )
+        let builder = HarnessBuilder(
+            fileSystem: fileSystem,
+            commandRunner: MockCommandRunner(queuedResults: [.success("")]),
+            harnessDirectory: "/cache/h1"
+        )
+
+        _ = try builder.build(request, target: target)
+
+        let written = fileSystem.writeOperations.map(\.path)
+        #expect(!written.contains("/cache/h1/Sources/HarnessApp.swift"))
+        #expect(!written.contains("/cache/h1/Harness.app/Info.plist"))
+        #expect(written.contains("/cache/h1/Sources/ComponentSource.swift"))
+        #expect(written.contains("/cache/h1/Sources/PlaygroundEntry.swift"))
+    }
+
+    @Test
+    func aChangedFixedFileIsRewritten() throws {
+        let fileSystem = MockFileSystem(
+            existingPaths: ["/cache/h1/Sources/HarnessApp.swift"],
+            fileContentsByPath: ["/cache/h1/Sources/HarnessApp.swift": "old"]
+        )
+        let builder = HarnessBuilder(
+            fileSystem: fileSystem,
+            commandRunner: MockCommandRunner(queuedResults: [.success("")]),
+            harnessDirectory: "/cache/h1"
+        )
+
+        _ = try builder.build(request, target: target)
+
+        #expect(fileSystem.writeOperations.map(\.path).contains("/cache/h1/Sources/HarnessApp.swift"))
+    }
+
+    @Test
+    func theHarnessIsWarmOnceItsExecutableExists() {
+        let cold = HarnessBuilder(
+            fileSystem: MockFileSystem(),
+            commandRunner: MockCommandRunner(),
+            harnessDirectory: "/c"
+        )
+        let warm = HarnessBuilder(
+            fileSystem: MockFileSystem(existingPaths: ["/c/Harness.app/Harness"]),
+            commandRunner: MockCommandRunner(),
+            harnessDirectory: "/c"
+        )
+
+        #expect(!cold.isWarm)
+        #expect(warm.isWarm)
+    }
+
+    @Test
     func compilesAllThreeSourcesForTheSimulatorAtTheRuntimeVersion() throws {
         let runner = MockCommandRunner(queuedResults: [.success("")])
         let builder = HarnessBuilder(fileSystem: MockFileSystem(), commandRunner: runner, harnessDirectory: "/cache/h1")

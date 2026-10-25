@@ -7,10 +7,10 @@ struct HarnessTargetResolver {
 
     func resolve() throws -> HarnessTarget {
         let sdkPath = try commandRunner
-            .run(executable: "/usr/bin/xcrun", arguments: ["--sdk", "iphonesimulator", "--show-sdk-path"])
+            .run(executable: ExternalTools.xcrun, arguments: ["--sdk", "iphonesimulator", "--show-sdk-path"])
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let deviceList = try commandRunner
-            .run(executable: "/usr/bin/xcrun", arguments: ["simctl", "list", "devices", "--json"])
+            .run(executable: ExternalTools.xcrun, arguments: ["simctl", "list", "devices", "--json"])
         let version = try SimulatorRuntimeVersionParser.iOSVersion(
             ofDevice: udid,
             inDeviceListJSON: Data(deviceList.utf8)

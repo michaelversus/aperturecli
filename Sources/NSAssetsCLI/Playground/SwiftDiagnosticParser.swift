@@ -5,8 +5,9 @@ struct SwiftDiagnosticParser {
     private static let located = try? NSRegularExpression(pattern: #"^(.*?):(\d+):(\d+): (error|warning|note): (.*)$"#)
     private static let unlocated = try? NSRegularExpression(pattern: #"^(error|warning): (.*)$"#)
 
-    /// The line in the generated entry file where the app's entry expression starts.
+    /// Where the app's entry expression sits in the generated entry file.
     let entryFirstLine: Int
+    let entryLineCount: Int
 
     func parse(_ output: String) -> [PlaygroundDiagnostic] {
         output.components(separatedBy: "\n").compactMap(parse(line:))
@@ -37,8 +38,10 @@ struct SwiftDiagnosticParser {
         case HarnessSourceGenerator.componentFileName:
             file = .component
         case HarnessSourceGenerator.entryFileName:
-            file = .entry
-            adjustedLine = max(1, lineNumber - entryFirstLine + 1)
+            // Only the expression is the app's; the generated wrapper around it is the harness.
+            let inExpression = (entryFirstLine..<(entryFirstLine + entryLineCount)).contains(lineNumber)
+            file = inExpression ? .entry : .harness
+            adjustedLine = inExpression ? lineNumber - entryFirstLine + 1 : lineNumber
         default:
             file = .harness
         }

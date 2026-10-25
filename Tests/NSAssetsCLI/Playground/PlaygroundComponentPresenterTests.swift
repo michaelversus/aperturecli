@@ -29,6 +29,28 @@ struct PlaygroundComponentPresenterTests {
     }
 
     @Test
+    func theFirstBuildInARepositoryIsMarkedAsTheSlowOne() async {
+        let builder = MockHarnessBuilder(result: .success(.built(appPath: "/x")), isWarm: false)
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: builder, controller: MockHarnessSimulatorController())
+
+        await presenter.present(request, report: statuses.record)
+
+        #expect(statuses.statuses.first?.message?.contains("first build") == true)
+    }
+
+    @Test
+    func laterBuildsAreNotMarkedAsTheSlowOne() async {
+        let builder = MockHarnessBuilder(result: .success(.built(appPath: "/x")), isWarm: true)
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: builder, controller: MockHarnessSimulatorController())
+
+        await presenter.present(request, report: statuses.record)
+
+        #expect(statuses.statuses.first?.message?.contains("first build") == false)
+    }
+
+    @Test
     func aModuleOutsideTheSDKFailsBeforeAnythingIsBuilt() async {
         let builder = MockHarnessBuilder(result: .success(.built(appPath: "/x")))
         let controller = MockHarnessSimulatorController()

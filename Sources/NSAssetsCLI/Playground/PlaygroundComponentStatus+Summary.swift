@@ -4,8 +4,7 @@ extension PlaygroundComponentStatus {
         var parts = [state.rawValue]
         if let message { parts.append(message) }
         for diagnostic in diagnostics {
-            let location = diagnostic.line.map { "\(diagnostic.file.rawValue):\($0)" } ?? diagnostic.file.rawValue
-            parts.append("[\(location)] \(diagnostic.message)")
+            parts.append("[\(diagnostic.location)] \(diagnostic.message)")
         }
         return parts.joined(separator: " ")
     }

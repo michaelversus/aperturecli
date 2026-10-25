@@ -1,5 +1,7 @@
-/// Drives one simulator's harness app with `simctl`. Marked `@unchecked Sendable` for the same reason as
-/// `HarnessBuilder`: one component is presented at a time.
+/// Drives one simulator's harness app with `simctl`.
+///
+/// `@unchecked Sendable` for the same reason as `HarnessBuilder`: `CommandRunning` is not declared `Sendable`, and one
+/// component is presented at a time.
 struct SimctlHarnessController: HarnessSimulatorControlling, @unchecked Sendable {
     let udid: String
     let commandRunner: CommandRunning
@@ -19,6 +21,6 @@ struct SimctlHarnessController: HarnessSimulatorControlling, @unchecked Sendable
     }
 
     private func simctl(_ arguments: [String]) throws {
-        _ = try commandRunner.run(executable: "/usr/bin/xcrun", arguments: ["simctl"] + arguments)
+        _ = try commandRunner.run(executable: ExternalTools.xcrun, arguments: ["simctl"] + arguments)
     }
 }

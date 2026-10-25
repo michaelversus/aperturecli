@@ -13,22 +13,25 @@ struct HarnessImportChecker {
         guard let pattern = Self.importPattern else { return [] }
         var diagnostics: [PlaygroundDiagnostic] = []
         for (index, line) in source.components(separatedBy: "\n").enumerated() {
-            let range = NSRange(line.startIndex..., in: line)
-            guard let match = pattern.firstMatch(in: line, range: range),
-                  let moduleRange = Range(match.range(at: 1), in: line)
-            else { continue }
-            let module = String(line[moduleRange])
-            guard !isSystemModule(module) else { continue }
-            diagnostics.append(
-                PlaygroundDiagnostic(
-                    file: .component,
-                    line: index + 1,
-                    column: nil,
-                    severity: .error,
-                    message: "Module '\(module)' is not part of the iOS SDK. The playground builds this component "
-                        + "on its own, so inline the code it needs instead of importing it."
+            // Several statements can share a line, so each one after a semicolon is checked on its own.
+            for statement in line.components(separatedBy: ";") {
+                let range = NSRange(statement.startIndex..., in: statement)
+                guard let match = pattern.firstMatch(in: statement, range: range),
+                      let moduleRange = Range(match.range(at: 1), in: statement)
+                else { continue }
+                let module = String(statement[moduleRange])
+                guard !isSystemModule(module) else { continue }
+                diagnostics.append(
+                    PlaygroundDiagnostic(
+                        file: .component,
+                        line: index + 1,
+                        column: nil,
+                        severity: .error,
+                        message: "Module '\(module)' is not part of the iOS SDK. The playground builds this "
+                            + "component on its own, so inline the code it needs instead of importing it."
+                    )
                 )
-            )
+            }
         }
         return diagnostics
     }

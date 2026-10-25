@@ -45,7 +45,7 @@ extension NSAssetsCLI.Playground {
                 onReady: { port in
                     Swift.print("Playground ready on 127.0.0.1:\(port). Press Ctrl-C to stop.")
                     guard showMock else { return }
-                    Task { await presenter.present(.mock) { Swift.print("Mock component: \($0.summary)") } }
+                    server.present(.mock) { Swift.print("Mock component: \($0.summary)") }
                 },
                 onDebugViewerReady: { Swift.print("Debug viewer: http://127.0.0.1:\($0)/") }
             )

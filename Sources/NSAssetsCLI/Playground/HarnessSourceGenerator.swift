@@ -23,7 +23,11 @@ enum HarnessSourceGenerator {
     static func entry(kind: PlaygroundComponentKind, expression: String) -> HarnessEntrySource {
         let (before, after) = wrapper(for: kind)
         let text = (before + [expression] + after).joined(separator: "\n") + "\n"
-        return HarnessEntrySource(text: text, firstExpressionLine: before.count + 1)
+        return HarnessEntrySource(
+            text: text,
+            firstExpressionLine: before.count + 1,
+            expressionLineCount: expression.components(separatedBy: "\n").count
+        )
     }
 
     static func infoPlist(minimumOSVersion: String) -> String {

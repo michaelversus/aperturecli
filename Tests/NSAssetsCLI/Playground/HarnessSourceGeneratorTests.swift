@@ -47,6 +47,13 @@ struct HarnessSourceGeneratorTests {
         #expect(lines[entry.firstExpressionLine - 1].contains("Group {"))
     }
 
+    @Test(arguments: [("A()", 1), ("Group {\n    A()\n}", 3), ("A()\n", 2)])
+    func theEntryKnowsHowManyLinesTheExpressionHas(expression: String, lines: Int) {
+        let entry = HarnessSourceGenerator.entry(kind: .swiftUIView, expression: expression)
+
+        #expect(entry.expressionLineCount == lines)
+    }
+
     @Test
     func theAppSourceIsASwiftUIAppThatShowsTheEntry() {
         #expect(HarnessSourceGenerator.appSource.contains("@main"))

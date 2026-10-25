@@ -14,12 +14,21 @@ struct PlaygroundComponentPresenter: PlaygroundComponentPresenting {
         _ request: PlaygroundComponentRequest,
         report: @Sendable (PlaygroundComponentStatus) -> Void
     ) async {
-        report(PlaygroundComponentStatus(id: request.id, state: .building, message: "Building the component…"))
+        let message = builder.isWarm
+            ? "Building the component…"
+            : "Preparing the harness. The first build in a repository takes a few seconds longer…"
+        report(PlaygroundComponentStatus(id: request.id, state: .building, message: message))
         do {
             let target = try resolveTarget()
             let imports = importDiagnostics(request.source, target)
             guard imports.isEmpty else {
-                report(failure(request, "The component imports modules the playground cannot see.", imports))
+                report(
+                    failure(
+                        for: request,
+                        message: "The component imports modules the playground cannot see.",
+                        diagnostics: imports
+                    )
+                )
                 return
             }
             switch try builder.build(request, target: target) {
@@ -30,17 +39,17 @@ struct PlaygroundComponentPresenter: PlaygroundComponentPresenting {
                 report(PlaygroundComponentStatus(id: request.id, state: .ready))
             case let .failed(diagnostics, log):
                 output(log)
-                report(failure(request, "The component did not compile.", diagnostics))
+                report(failure(for: request, message: "The component did not compile.", diagnostics: diagnostics))
             }
         } catch {
-            report(failure(request, error.localizedDescription, []))
+            report(failure(for: request, message: error.localizedDescription))
         }
     }
 
     private func failure(
-        _ request: PlaygroundComponentRequest,
-        _ message: String,
-        _ diagnostics: [PlaygroundDiagnostic]
+        for request: PlaygroundComponentRequest,
+        message: String,
+        diagnostics: [PlaygroundDiagnostic] = []
     ) -> PlaygroundComponentStatus {
         PlaygroundComponentStatus(id: request.id, state: .failed, message: message, diagnostics: diagnostics)
     }

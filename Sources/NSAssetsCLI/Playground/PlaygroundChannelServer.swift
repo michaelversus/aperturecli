@@ -18,14 +18,11 @@ final class PlaygroundChannelServer: @unchecked Sendable {
 
     private let session: any SimulatorSession
     private let token: String
-    private let verifier: SimulatorTapVerifier?
-    private let componentPresenter: (any PlaygroundComponentPresenting)?
+    private let componentHandler: PlaygroundComponentRequestHandler
     private let output: @Sendable (String) -> Void
     private let tapRunner: PlaygroundTapRunner
-    // Taps and components each run one after another: verifying a tap compares screens before and after it, and
-    // components share one harness app and one simulator.
+    // Taps run one after another, because verifying one compares screens before and after it.
     private let taps = SerialTaskQueue()
-    private let components = SerialTaskQueue()
     private let requestedPort: UInt16
     private let handshakeTimeout: Duration
     private let queue = DispatchQueue(label: "nsassets.playground.channel")
@@ -49,8 +46,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     ) {
         self.session = session
         self.token = token
-        self.verifier = verifier
-        self.componentPresenter = componentPresenter
+        self.componentHandler = PlaygroundComponentRequestHandler(presenter: componentPresenter)
         self.output = output
         self.tapRunner = PlaygroundTapRunner(session: session, verifier: verifier, output: output)
         self.requestedPort = port
@@ -190,42 +186,19 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         taps.enqueue { await tapRunner.run(point) }
     }
 
-    /// Components are presented one after another, because they share one harness app and one simulator.
     private func handleComponentRequest(_ text: Data, from client: Client) {
-        let request: PlaygroundComponentRequest
-        do {
-            request = try JSONDecoder().decode(PlaygroundComponentRequest.self, from: text)
-        } catch {
-            sendJSON(
-                PlaygroundComponentStatus(
-                    id: requestID(in: text),
-                    state: .failed,
-                    message: "The component request was malformed: \(error.localizedDescription)"
-                ),
-                to: client
-            )
-            return
-        }
-        guard let componentPresenter else {
-            sendJSON(
-                PlaygroundComponentStatus(
-                    id: request.id,
-                    state: .failed,
-                    message: "Components are not available in this session."
-                ),
-                to: client
-            )
-            return
-        }
-        components.enqueue { [self] in
-            await componentPresenter.present(request) { status in
-                queue.async { self.sendJSON(status, to: client) }
-            }
+        componentHandler.handle(text) { [weak self] status in
+            guard let self else { return }
+            queue.async { self.sendJSON(status, to: client) }
         }
     }
 
-    private func requestID(in text: Data) -> String {
-        (try? JSONSerialization.jsonObject(with: text) as? [String: Any])?["id"] as? String ?? ""
+    /// Presents a component without a client asking for it, in line with the requests clients send.
+    func present(
+        _ request: PlaygroundComponentRequest,
+        report: @escaping @Sendable (PlaygroundComponentStatus) -> Void
+    ) {
+        componentHandler.present(request, reply: report)
     }
 
     private func completeHandshake(of client: Client, with message: PlaygroundClientMessage?) {

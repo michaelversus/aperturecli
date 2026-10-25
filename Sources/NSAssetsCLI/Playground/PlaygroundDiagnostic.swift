@@ -19,4 +19,14 @@ struct PlaygroundDiagnostic: Codable, Equatable, Sendable {
     let column: Int?
     let severity: Severity
     let message: String
+
+    /// Where this points, for the terminal: the file, and the line when there is one.
+    var location: String {
+        line.map { "\(file.rawValue):\($0)" } ?? file.rawValue
+    }
+
+    /// An error with no position in the code the app sent.
+    static func harnessError(_ message: String) -> PlaygroundDiagnostic {
+        PlaygroundDiagnostic(file: .harness, line: nil, column: nil, severity: .error, message: message)
+    }
 }

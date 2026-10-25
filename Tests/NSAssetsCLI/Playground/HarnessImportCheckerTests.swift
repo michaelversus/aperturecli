@@ -45,6 +45,14 @@ struct HarnessImportCheckerTests {
     }
 
     @Test
+    func importsAfterASemicolonOnTheSameLineAreFoundToo() {
+        let diagnostics = checker.diagnostics(forSource: "import SwiftUI; import Core; import Other")
+
+        #expect(diagnostics.map(\.message).count == 2)
+        #expect(diagnostics.allSatisfy { $0.line == 1 })
+    }
+
+    @Test
     func codeThatMerelyMentionsImportIsNotAnImport() {
         let source = "let important = \"import Nothing\"\n// import Commented\nstruct ImportantView {}"
 
