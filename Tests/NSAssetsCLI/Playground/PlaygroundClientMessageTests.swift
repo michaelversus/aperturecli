@@ -20,6 +20,24 @@ struct PlaygroundClientMessageTests {
         #expect(try decode(json).tapPoint == nil)
     }
 
+    @Test(arguments: [("start", SimulatorTouchPhase.start), ("move", .position), ("end", .end)])
+    func aTouchInsideTheScreenCarriesItsPhaseAndPoint(name: String, phase: SimulatorTouchPhase) throws {
+        let message = try decode(#"{"type":"touch","phase":"\#(name)","x":0.25,"y":0.75}"#)
+
+        let point = NormalizedPoint(horizontal: 0.25, vertical: 0.75)
+        #expect(message.touch == PlaygroundTouch(phase: phase, point: point))
+    }
+
+    @Test(arguments: [
+        #"{"type":"touch","phase":"start","x":1.5,"y":0.5}"#,
+        #"{"type":"touch","phase":"sideways","x":0.5,"y":0.5}"#,
+        #"{"type":"touch","x":0.5,"y":0.5}"#,
+        #"{"type":"tap","x":0.5,"y":0.5}"#
+    ])
+    func anythingElseIsNotATouch(json: String) throws {
+        #expect(try decode(json).touch == nil)
+    }
+
     @Test
     func theServerMessagesNameTheVersionsInvolved() {
         #expect(PlaygroundServerMessage.hello().protocolVersion == PlaygroundChannel.protocolVersion)

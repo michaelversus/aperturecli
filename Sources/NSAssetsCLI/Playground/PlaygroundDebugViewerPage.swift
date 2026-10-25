@@ -1,4 +1,4 @@
-/// The hidden debug viewer: a canvas showing the stream, with clicks sent back as taps.
+/// The hidden debug viewer: a canvas showing the stream, with mouse gestures sent back as touches.
 /// It speaks the same protocol as the app.
 enum PlaygroundDebugViewerPage {
     static func html(webSocketPort: UInt16, token: String) -> String {
@@ -45,11 +45,20 @@ enum PlaygroundDebugViewerPage {
         bitmap.close();
         frames += 1;
       };
-      canvas.addEventListener("click", (event) => {
+      // The mouse is the finger: press, drag and release stream as one gesture.
+      let touching = false;
+      const send = (phase, event) => {
         const box = canvas.getBoundingClientRect();
-        const x = (event.clientX - box.left) / box.width;
-        const y = (event.clientY - box.top) / box.height;
-        socket.send(JSON.stringify({ type: "tap", x, y }));
+        const x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+        const y = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
+        socket.send(JSON.stringify({ type: "touch", phase, x, y }));
+      };
+      canvas.addEventListener("mousedown", (event) => { touching = true; send("start", event); });
+      canvas.addEventListener("mousemove", (event) => { if (touching) send("move", event); });
+      window.addEventListener("mouseup", (event) => {
+        if (!touching) return;
+        touching = false;
+        send("end", event);
       });
       setInterval(() => {
         if (socket.readyState === 1) status.textContent = `connected, ${frames} fps`;

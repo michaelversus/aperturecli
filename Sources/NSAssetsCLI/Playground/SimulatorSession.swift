@@ -5,5 +5,7 @@ protocol SimulatorSession: Sendable {
     func start() async throws
     func frames() -> AsyncThrowingStream<SimulatorFrame, Error>
     func tap(at point: NormalizedPoint) async throws
+    /// One step of a gesture: a finger going down, moving or lifting. A gesture is `start`, any `position`s, `end`.
+    func touch(_ phase: SimulatorTouchPhase, at point: NormalizedPoint) async throws
     func stop() async
 }

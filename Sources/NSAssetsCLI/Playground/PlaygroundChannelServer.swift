@@ -21,7 +21,8 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     private let componentHandler: PlaygroundComponentRequestHandler
     private let output: @Sendable (String) -> Void
     private let tapRunner: PlaygroundTapRunner
-    // Taps run one after another, because verifying one compares screens before and after it.
+    private let touchRunner: PlaygroundTouchRunner
+    // Taps and gestures run one after another, because verifying a tap compares screens before and after it.
     private let taps = SerialTaskQueue()
     private let requestedPort: UInt16
     private let handshakeTimeout: Duration
@@ -49,6 +50,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         self.componentHandler = PlaygroundComponentRequestHandler(presenter: componentPresenter)
         self.output = output
         self.tapRunner = PlaygroundTapRunner(session: session, verifier: verifier, output: output)
+        self.touchRunner = PlaygroundTouchRunner(session: session, output: output)
         self.requestedPort = port
         self.handshakeTimeout = handshakeTimeout
     }
@@ -144,6 +146,8 @@ final class PlaygroundChannelServer: @unchecked Sendable {
                 closeUnlessHandshaken(client)
             case .failed, .cancelled:
                 clients[key] = nil
+                let touchRunner = touchRunner
+                taps.enqueue { await touchRunner.release(owner: key) }
             default:
                 break
             }
@@ -179,6 +183,12 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         guard let message else { return }
         if message.type == .showComponent {
             handleComponentRequest(text, from: client)
+            return
+        }
+        if let touch = message.touch {
+            let touchRunner = touchRunner
+            let owner = ObjectIdentifier(client)
+            taps.enqueue { await touchRunner.run(touch, from: owner) }
             return
         }
         guard let point = message.tapPoint else { return }
