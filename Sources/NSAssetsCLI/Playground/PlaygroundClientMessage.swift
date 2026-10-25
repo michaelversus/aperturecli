@@ -1,10 +1,11 @@
 import Foundation
 
-/// A text message from a connected client: a hello that names its protocol, or a tap.
+/// A text message from a connected client: a hello that names its protocol, a tap, or a request to show a component.
 struct PlaygroundClientMessage: Decodable, Equatable {
     enum Kind: String, Decodable {
         case hello
         case tap
+        case showComponent
     }
 
     let type: Kind
