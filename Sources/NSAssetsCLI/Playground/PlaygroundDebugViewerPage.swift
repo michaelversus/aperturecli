@@ -1,4 +1,4 @@
-/// The hidden debug viewer: a canvas showing the stream, with clicks sent back as taps.
+/// The hidden debug viewer: a canvas showing the stream, with mouse gestures and keys sent back.
 /// It speaks the same protocol as the app.
 enum PlaygroundDebugViewerPage {
     static func html(webSocketPort: UInt16, token: String) -> String {
@@ -45,12 +45,29 @@ enum PlaygroundDebugViewerPage {
         bitmap.close();
         frames += 1;
       };
-      canvas.addEventListener("click", (event) => {
+      // The mouse is the finger: press, drag and release stream as one gesture.
+      let touching = false;
+      const send = (phase, event) => {
         const box = canvas.getBoundingClientRect();
-        const x = (event.clientX - box.left) / box.width;
-        const y = (event.clientY - box.top) / box.height;
-        socket.send(JSON.stringify({ type: "tap", x, y }));
+        const x = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+        const y = Math.min(1, Math.max(0, (event.clientY - box.top) / box.height));
+        socket.send(JSON.stringify({ type: "touch", phase, x, y }));
+      };
+      canvas.addEventListener("mousedown", (event) => { touching = true; send("start", event); });
+      canvas.addEventListener("mousemove", (event) => { if (touching) send("move", event); });
+      window.addEventListener("mouseup", (event) => {
+        if (!touching) return;
+        touching = false;
+        send("end", event);
       });
+      // Keys go to the simulator while the canvas has focus; a click on it gives it focus.
+      canvas.tabIndex = 0;
+      const sendKey = (phase, event) => {
+        event.preventDefault();
+        socket.send(JSON.stringify({ type: "key", code: event.code, phase }));
+      };
+      canvas.addEventListener("keydown", (event) => sendKey("down", event));
+      canvas.addEventListener("keyup", (event) => sendKey("up", event));
       setInterval(() => {
         if (socket.readyState === 1) status.textContent = `connected, ${frames} fps`;
         frames = 0;

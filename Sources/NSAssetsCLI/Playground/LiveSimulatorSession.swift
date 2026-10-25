@@ -68,10 +68,19 @@ actor LiveSimulatorSession: SimulatorSession {
     }
 
     func tap(at point: NormalizedPoint) async throws {
-        guard let touchSender else { throw PlaygroundError.sessionNotStarted }
-        try await touchSender.send(.start, at: point)
+        try await touch(.start, at: point)
         try await Task.sleep(for: Self.tapHoldDuration)
-        try await touchSender.send(.end, at: point)
+        try await touch(.end, at: point)
+    }
+
+    func touch(_ phase: SimulatorTouchPhase, at point: NormalizedPoint) async throws {
+        guard let touchSender else { throw PlaygroundError.sessionNotStarted }
+        try await touchSender.send(phase, at: point)
+    }
+
+    func key(usage: UInt64, isDown: Bool) async throws {
+        guard let touchSender else { throw PlaygroundError.sessionNotStarted }
+        try await touchSender.sendKey(usage: usage, isDown: isDown)
     }
 
     func stop() async {

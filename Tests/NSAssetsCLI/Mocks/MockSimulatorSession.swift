@@ -6,7 +6,17 @@ actor MockSimulatorSession: SimulatorSession {
         case probe
         case start
         case tap(NormalizedPoint)
+        case touch(SimulatorTouchPhase, NormalizedPoint)
+        case key(usage: UInt64, isDown: Bool)
         case stop
+
+        var isKey: Bool {
+            if case .key = self { true } else { false }
+        }
+
+        var isTouch: Bool {
+            if case .touch = self { true } else { false }
+        }
     }
 
     private(set) var calls: [Call] = []
@@ -48,6 +58,16 @@ actor MockSimulatorSession: SimulatorSession {
 
     func tap(at point: NormalizedPoint) async throws {
         calls.append(.tap(point))
+        if let tapError { throw tapError }
+    }
+
+    func touch(_ phase: SimulatorTouchPhase, at point: NormalizedPoint) async throws {
+        calls.append(.touch(phase, point))
+        if let tapError { throw tapError }
+    }
+
+    func key(usage: UInt64, isDown: Bool) async throws {
+        calls.append(.key(usage: usage, isDown: isDown))
         if let tapError { throw tapError }
     }
 
