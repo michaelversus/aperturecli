@@ -23,11 +23,12 @@ jobs:
       run: |
         set -euo pipefail
         BIN_PATH="$(swift build --show-bin-path)"
-        TEST_BUNDLE="${BIN_PATH}/NSAssetsCLIPackageTests.xctest/Contents/MacOS/NSAssetsCLIPackageTests"
+        TEST_BUNDLE="$(find "${BIN_PATH}" -maxdepth 1 -name '*.xctest' | head -n 1)"
+        TEST_BINARY="${TEST_BUNDLE}/Contents/MacOS/$(basename "${TEST_BUNDLE}" .xctest)"
         PROF_DATA="${BIN_PATH}/codecov/default.profdata"
         xcrun llvm-cov export \
           -format=lcov \
-          "${TEST_BUNDLE}" \
+          "${TEST_BINARY}" \
           -instr-profile "${PROF_DATA}" \
           > info.lcov
     - name: Upload coverage to Codecov
