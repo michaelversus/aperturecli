@@ -55,6 +55,22 @@ struct PlaygroundClientMessageTests {
         #expect(try decode(json).keyPress == nil)
     }
 
+    @Test(arguments: [
+        ("home", SimulatorHardwareButton.home), ("lock", .lock), ("volumeUp", .volumeUp), ("volumeDown", .volumeDown)
+    ])
+    func aKnownButtonIsAButtonPress(name: String, button: SimulatorHardwareButton) throws {
+        #expect(try decode(#"{"type":"button","button":"\#(name)"}"#).buttonPress == button)
+    }
+
+    @Test(arguments: [
+        #"{"type":"button","button":"power"}"#,
+        #"{"type":"button"}"#,
+        #"{"type":"tap","button":"home"}"#
+    ])
+    func anythingElseIsNotAButtonPress(json: String) throws {
+        #expect(try decode(json).buttonPress == nil)
+    }
+
     @Test
     func theServerMessagesNameTheVersionsInvolved() {
         #expect(PlaygroundServerMessage.hello().protocolVersion == PlaygroundChannel.protocolVersion)

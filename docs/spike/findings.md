@@ -54,6 +54,21 @@ Safari, because the Clock app is not installed in the simulator image.
 - Device Hub sets `dtuhidd.active` a few seconds after a boot, so a probe run straight after boot can still say
   `supported` and report `degraded` moments later
 
+## Hardware buttons and typing (added after the spike)
+
+Found by trying values against throwaway iOS 27.0 simulators and reading `dtuhidd`'s guest log, which names the exact
+decoding error for a payload it rejects.
+
+- **Keys** use `IndigoKeyboardButtonEvent` on the digitizer feature with `usageCode` (USB keyboard page) and `state`:
+  1 is down, 0 is up. Letters, backspace and Shift reached a Settings search field.
+- **Buttons** use `IndigoButtonEvent` on the `com.apple.coredevice.feature.remote.hid.button` feature with
+  `usagePage` 0x0C (consumer), `usageCode` and `state`: 1 is down and 2 is up, and 0 is rejected. Lock is 0x30, volume up
+  0xE9 and volume down 0xEA; SpringBoard logged each press, and lock turned the screen off.
+- **Home** is not a button on a device without a home button: `AC Home` (0x223) arrives and SpringBoard logs
+  "Ignoring home button". Home is a swipe up from the bottom edge, sent as a normal touch gesture with the digitizer
+  `edge` field set to 3. Edge 0 to 2 only scrolled the app, 3 went home. Devices with a home button are untested.
+- A payload the daemon cannot decode makes it cancel the whole connection, so key names and state values must be exact.
+
 ## Verdict
 
 Go. Streaming and tapping both work on Xcode 27.1 with the DTUHID path, at a frame rate and memory footprint that do not

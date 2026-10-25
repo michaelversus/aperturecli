@@ -9,5 +9,7 @@ protocol SimulatorSession: Sendable {
     func touch(_ phase: SimulatorTouchPhase, at point: NormalizedPoint) async throws
     /// A key going down or up, named by its USB HID keyboard usage.
     func key(usage: UInt64, isDown: Bool) async throws
+    /// A full press of a hardware button.
+    func press(_ button: SimulatorHardwareButton) async throws
     func stop() async
 }

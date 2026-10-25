@@ -16,6 +16,10 @@ final class DTUHIDTouchSender: @unchecked Sendable {
     private static let replyTail = Duration.milliseconds(200)
     private static let drain = Duration.milliseconds(80)
 
+    static let consumerUsagePage: UInt64 = 0x0C
+    private static let buttonFeature = "com.apple.coredevice.feature.remote.hid.button"
+    private static let buttonDownState: UInt64 = 1
+    private static let buttonUpState: UInt64 = 2
     private static let keyDownState: UInt64 = 1
     private static let keyUpState: UInt64 = 0
 
@@ -45,7 +49,7 @@ final class DTUHIDTouchSender: @unchecked Sendable {
         throw PlaygroundError.hidDaemonUnresponsive(attempts: livenessAttempts)
     }
 
-    func send(_ phase: SimulatorTouchPhase, at point: NormalizedPoint) async throws {
+    func send(_ phase: SimulatorTouchPhase, at point: NormalizedPoint, edge: UInt64 = 0) async throws {
         let pointOne = xpc_dictionary_create(nil, nil, 0)
         xpc_dictionary_set_double(pointOne, "x", point.horizontal)
         xpc_dictionary_set_double(pointOne, "y", point.vertical)
@@ -53,7 +57,7 @@ final class DTUHIDTouchSender: @unchecked Sendable {
         let payload = xpc_dictionary_create(nil, nil, 0)
         xpc_dictionary_set_value(payload, "pointOne", pointOne)
         xpc_dictionary_set_uint64(payload, "eventType", phase.rawValue)
-        xpc_dictionary_set_uint64(payload, "edge", 0)
+        xpc_dictionary_set_uint64(payload, "edge", edge)
         xpc_dictionary_set_uint64(payload, "target", 0)
 
         connection.send(Self.message(type: "IndigoDigitizerEvent", barrier: false, payload: payload))
@@ -66,6 +70,20 @@ final class DTUHIDTouchSender: @unchecked Sendable {
         xpc_dictionary_set_uint64(payload, "state", isDown ? Self.keyDownState : Self.keyUpState)
 
         connection.send(Self.message(type: "IndigoKeyboardButtonEvent", barrier: false, payload: payload))
+        await connection.sendBarrier()
+    }
+
+    /// A button on the `hid.button` feature. The daemon drops the whole connection on a payload it cannot decode, so
+    /// the keys and the down/up states below are exactly the ones it accepts: down is 1 and up is 2, and 0 is invalid.
+    func sendButton(usagePage: UInt64, usage: UInt64, isDown: Bool) async throws {
+        let payload = xpc_dictionary_create(nil, nil, 0)
+        xpc_dictionary_set_uint64(payload, "usagePage", usagePage)
+        xpc_dictionary_set_uint64(payload, "usageCode", usage)
+        xpc_dictionary_set_uint64(payload, "state", isDown ? Self.buttonDownState : Self.buttonUpState)
+
+        connection.send(
+            Self.message(type: "IndigoButtonEvent", feature: Self.buttonFeature, barrier: false, payload: payload)
+        )
         await connection.sendBarrier()
     }
 
@@ -84,11 +102,16 @@ final class DTUHIDTouchSender: @unchecked Sendable {
         return message(type: "IndigoKeyboardButtonEvent", barrier: true, payload: payload)
     }
 
-    private static func message(type: String, barrier: Bool, payload: xpc_object_t) -> xpc_object_t {
+    private static func message(
+        type: String,
+        feature: String = serviceName,
+        barrier: Bool,
+        payload: xpc_object_t
+    ) -> xpc_object_t {
         let message = xpc_dictionary_create(nil, nil, 0)
         xpc_dictionary_set_string(message, "messageType", type)
         xpc_dictionary_set_bool(message, "isBarrier", barrier)
-        xpc_dictionary_set_string(message, "featureIdentifier", serviceName)
+        xpc_dictionary_set_string(message, "featureIdentifier", feature)
         xpc_dictionary_set_value(message, "payload", payload)
         return message
     }
