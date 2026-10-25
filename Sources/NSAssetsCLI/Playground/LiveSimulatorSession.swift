@@ -3,6 +3,7 @@ import Foundation
 /// Talks to a real, explicitly chosen simulator through private APIs. Without a UDID it can only probe.
 actor LiveSimulatorSession: SimulatorSession {
     private static let tapHoldDuration = Duration.milliseconds(60)
+    private static let buttonHoldDuration = Duration.milliseconds(100)
 
     let udid: String?
     private var touchSender: DTUHIDTouchSender?
@@ -81,6 +82,20 @@ actor LiveSimulatorSession: SimulatorSession {
     func key(usage: UInt64, isDown: Bool) async throws {
         guard let touchSender else { throw PlaygroundError.sessionNotStarted }
         try await touchSender.sendKey(usage: usage, isDown: isDown)
+    }
+
+    func press(_ button: SimulatorHardwareButton) async throws {
+        guard let touchSender else { throw PlaygroundError.sessionNotStarted }
+        guard let usage = button.consumerUsage else {
+            for step in SimulatorHomeGesture.steps {
+                try await touchSender.send(step.phase, at: step.point, edge: SimulatorHomeGesture.bottomEdge)
+                try await Task.sleep(for: SimulatorHomeGesture.stepInterval)
+            }
+            return
+        }
+        try await touchSender.sendButton(usagePage: DTUHIDTouchSender.consumerUsagePage, usage: usage, isDown: true)
+        try await Task.sleep(for: Self.buttonHoldDuration)
+        try await touchSender.sendButton(usagePage: DTUHIDTouchSender.consumerUsagePage, usage: usage, isDown: false)
     }
 
     func stop() async {

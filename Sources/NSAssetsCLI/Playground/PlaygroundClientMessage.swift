@@ -1,13 +1,14 @@
 import Foundation
 
-/// A text message from a connected client: a hello that names its protocol, a tap, a step of a gesture, or a request
-/// to show a component.
+/// A text message from a connected client: a hello that names its protocol, a tap, a step of a gesture, a key press, a
+/// button press, or a request to show a component.
 struct PlaygroundClientMessage: Decodable, Equatable {
     enum Kind: String, Decodable {
         case hello
         case tap
         case touch
         case key
+        case button
         case showComponent
     }
 
@@ -17,12 +18,14 @@ struct PlaygroundClientMessage: Decodable, Equatable {
     let vertical: Double?
     let phase: String?
     let code: String?
+    let button: String?
 
     enum CodingKeys: String, CodingKey {
         case type
         case protocolVersion
         case phase
         case code
+        case button
         case horizontal = "x"
         case vertical = "y"
     }
@@ -46,6 +49,12 @@ struct PlaygroundClientMessage: Decodable, Equatable {
         case "up": return PlaygroundKeyPress(usage: usage, isDown: false)
         default: return nil
         }
+    }
+
+    /// The hardware button this message asks for, or `nil` for anything else, including buttons this CLI does not know.
+    var buttonPress: SimulatorHardwareButton? {
+        guard type == .button else { return nil }
+        return button.flatMap(SimulatorHardwareButton.init(rawValue:))
     }
 
     private var screenPoint: NormalizedPoint? {

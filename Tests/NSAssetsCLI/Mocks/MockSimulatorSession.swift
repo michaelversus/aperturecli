@@ -8,6 +8,7 @@ actor MockSimulatorSession: SimulatorSession {
         case tap(NormalizedPoint)
         case touch(SimulatorTouchPhase, NormalizedPoint)
         case key(usage: UInt64, isDown: Bool)
+        case press(SimulatorHardwareButton)
         case stop
 
         var isKey: Bool {
@@ -68,6 +69,11 @@ actor MockSimulatorSession: SimulatorSession {
 
     func key(usage: UInt64, isDown: Bool) async throws {
         calls.append(.key(usage: usage, isDown: isDown))
+        if let tapError { throw tapError }
+    }
+
+    func press(_ button: SimulatorHardwareButton) async throws {
+        calls.append(.press(button))
         if let tapError { throw tapError }
     }
 

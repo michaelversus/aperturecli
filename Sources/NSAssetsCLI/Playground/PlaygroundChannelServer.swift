@@ -20,11 +20,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
     private let token: String
     private let componentHandler: PlaygroundComponentRequestHandler
     private let output: @Sendable (String) -> Void
-    private let tapRunner: PlaygroundTapRunner
-    private let touchRunner: PlaygroundTouchRunner
-    private let keyboardRunner: PlaygroundKeyboardRunner
-    // Taps and gestures run one after another, because verifying a tap compares screens before and after it.
-    private let taps = SerialTaskQueue()
+    private let input: PlaygroundInputRouter
     private let requestedPort: UInt16
     private let handshakeTimeout: Duration
     private let queue = DispatchQueue(label: "nsassets.playground.channel")
@@ -50,9 +46,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
         self.token = token
         self.componentHandler = PlaygroundComponentRequestHandler(presenter: componentPresenter)
         self.output = output
-        self.tapRunner = PlaygroundTapRunner(session: session, verifier: verifier, output: output)
-        self.touchRunner = PlaygroundTouchRunner(session: session, output: output)
-        self.keyboardRunner = PlaygroundKeyboardRunner(session: session, output: output)
+        self.input = PlaygroundInputRouter(session: session, verifier: verifier, output: output)
         self.requestedPort = port
         self.handshakeTimeout = handshakeTimeout
     }
@@ -148,12 +142,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
                 closeUnlessHandshaken(client)
             case .failed, .cancelled:
                 clients[key] = nil
-                let touchRunner = touchRunner
-                let keyboardRunner = keyboardRunner
-                taps.enqueue {
-                    await touchRunner.release(owner: key)
-                    await keyboardRunner.release(owner: key)
-                }
+                input.release(owner: key)
             default:
                 break
             }
@@ -191,21 +180,7 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             handleComponentRequest(text, from: client)
             return
         }
-        if let touch = message.touch {
-            let touchRunner = touchRunner
-            let owner = ObjectIdentifier(client)
-            taps.enqueue { await touchRunner.run(touch, from: owner) }
-            return
-        }
-        if let press = message.keyPress {
-            let keyboardRunner = keyboardRunner
-            let owner = ObjectIdentifier(client)
-            taps.enqueue { await keyboardRunner.run(press, from: owner) }
-            return
-        }
-        guard let point = message.tapPoint else { return }
-        let tapRunner = tapRunner
-        taps.enqueue { await tapRunner.run(point) }
+        input.route(message, from: ObjectIdentifier(client))
     }
 
     private func handleComponentRequest(_ text: Data, from client: Client) {

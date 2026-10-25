@@ -1,4 +1,4 @@
-/// The hidden debug viewer: a canvas showing the stream, with mouse gestures and keys sent back.
+/// The hidden debug viewer: a canvas showing the stream, with mouse gestures, keys and button presses sent back.
 /// It speaks the same protocol as the app.
 enum PlaygroundDebugViewerPage {
     static func html(webSocketPort: UInt16, token: String) -> String {
@@ -17,8 +17,10 @@ enum PlaygroundDebugViewerPage {
       body { margin: 0; background: #111; color: #ddd; font: 13px -apple-system, sans-serif; text-align: center; }
       canvas { height: 92vh; max-width: 100vw; margin-top: 8px; cursor: pointer; background: #000; }
       #status { padding: 4px; }
+      button { margin: 0 2px; }
     </style>
     <div id="status">connecting…</div>
+    <div id="buttons"></div>
     <canvas id="screen"></canvas>
     <script>
       const canvas = document.getElementById("screen");
@@ -60,6 +62,12 @@ enum PlaygroundDebugViewerPage {
         touching = false;
         send("end", event);
       });
+      for (const button of ["home", "lock", "volumeUp", "volumeDown"]) {
+        const element = document.createElement("button");
+        element.textContent = button;
+        element.addEventListener("click", () => socket.send(JSON.stringify({ type: "button", button })));
+        document.getElementById("buttons").appendChild(element);
+      }
       // Keys go to the simulator while the canvas has focus; a click on it gives it focus.
       canvas.tabIndex = 0;
       const sendKey = (phase, event) => {
