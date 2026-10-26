@@ -48,6 +48,46 @@ struct PlaygroundChannelRunnerTests {
     }
 
     @Test
+    func reAnnouncesTheSameTokenWhenTheAppAsksToDiscoverIt() async throws {
+        let poster = MockDistributedNotificationPoster()
+        let observer = MockDistributedNotificationObserver()
+        let ready = PortSignal()
+        let (runner, _) = makeRunner(poster: poster, observer: observer, onReady: { ready.set($0) })
+
+        let run = Task { try await runner.run() }
+        _ = try #require(await waitForValue { ready.port })
+        observer.fire(PlaygroundChannel.discoverNotificationName)
+        run.cancel()
+        _ = try? await run.value
+
+        #expect(poster.posts.count == 2)
+        let first = try #require(poster.posts.first)
+        let second = try #require(poster.posts.last)
+        #expect(second.name == PlaygroundChannel.notificationName)
+        #expect(second.userInfo["port"] as? Int == first.userInfo["port"] as? Int)
+        #expect(second.userInfo["token"] as? String == token)
+    }
+
+    @Test
+    func stopsObservingDiscoveryWhenCancelled() async throws {
+        let observer = MockDistributedNotificationObserver()
+        let ready = PortSignal()
+        let (runner, _) = makeRunner(
+            poster: MockDistributedNotificationPoster(),
+            observer: observer,
+            onReady: { ready.set($0) }
+        )
+
+        let run = Task { try await runner.run() }
+        _ = try #require(await waitForValue { ready.port })
+        #expect(observer.activeNames == [PlaygroundChannel.discoverNotificationName])
+        run.cancel()
+        _ = try? await run.value
+
+        #expect(observer.activeNames.isEmpty)
+    }
+
+    @Test
     func cancellingStopsTheServerSoNewConnectionsFail() async throws {
         let ready = PortSignal()
         let (runner, _) = makeRunner(poster: MockDistributedNotificationPoster(), onReady: { ready.set($0) })
@@ -99,6 +139,7 @@ struct PlaygroundChannelRunnerTests {
 
     private func makeRunner(
         poster: MockDistributedNotificationPoster,
+        observer: MockDistributedNotificationObserver = MockDistributedNotificationObserver(),
         debugViewer: PlaygroundDebugViewer? = nil,
         onReady: @escaping @Sendable (UInt16) -> Void = { _ in },
         onDebugViewerReady: @escaping @Sendable (UInt16) -> Void = { _ in }
@@ -117,6 +158,7 @@ struct PlaygroundChannelRunnerTests {
             simulatorUDID: "UDID-1",
             workingDirectory: "/repo",
             poster: poster,
+            observer: observer,
             debugViewer: debugViewer,
             onReady: onReady,
             onDebugViewerReady: onDebugViewerReady

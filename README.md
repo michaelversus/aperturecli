@@ -179,6 +179,10 @@ A missing file means the CLI was never run for the project. Write failures are i
 
 ## How it works
 
+### Playground discovery
+
+`playground serve` announces `{port, token}` through the distributed notification `app.nsbuilder.nsassets.playground.ready` when it starts. NSAssets Studio can ask a running `serve` to announce again by posting `app.nsbuilder.nsassets.playground.discover`; the CLI re-posts the same announcement, with the same token for the lifetime of the process. If nothing answers, the app should show that the playground is not running.
+
 ### Setup workflow
 1. The wizard prompts for repository-specific Xcode and simulator details.
 2. It resolves the project file and optional local packages path.

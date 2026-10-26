@@ -5,6 +5,8 @@ enum PlaygroundChannel {
     /// Bumped whenever the messages change in a way an older app or CLI cannot understand.
     static let protocolVersion = 1
     static let notificationName = Notification.Name("app.nsbuilder.nsassets.playground.ready")
+    /// Posted by the app to ask a running `serve` to announce itself again.
+    static let discoverNotificationName = Notification.Name("app.nsbuilder.nsassets.playground.discover")
 
     private static let subprotocolPrefix = "nsassets-playground."
 

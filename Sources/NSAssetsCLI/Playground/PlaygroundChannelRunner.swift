@@ -1,13 +1,14 @@
 import Foundation
 
 /// Runs the channel for one simulator: starts the server, announces it to the app, and serves until the surrounding
-/// task is cancelled. The hidden debug viewer runs alongside when one is given.
+/// task is cancelled. The announcement is repeated, unchanged, whenever the app asks for it. The hidden debug viewer runs alongside when one is given.
 struct PlaygroundChannelRunner {
     let server: PlaygroundChannelServer
     let token: String
     let simulatorUDID: String
     let workingDirectory: String
     let poster: any DistributedNotificationPosting & Sendable
+    let observer: any DistributedNotificationObserving
     let debugViewer: PlaygroundDebugViewer?
     let onReady: @Sendable (UInt16) -> Void
     let onDebugViewerReady: @Sendable (UInt16) -> Void
@@ -25,10 +26,15 @@ struct PlaygroundChannelRunner {
             simulatorUDID: simulatorUDID,
             workingDirectory: workingDirectory
         )
-        poster.post(name: PlaygroundChannel.notificationName, userInfo: announcement.userInfo)
+        let announce: @Sendable () -> Void = { [poster] in
+            poster.post(name: PlaygroundChannel.notificationName, userInfo: announcement.userInfo)
+        }
+        let stopObserving = observer.observe(name: PlaygroundChannel.discoverNotificationName, handler: announce)
+        announce()
         onReady(port)
 
         await waitUntilCancelled()
+        stopObserving()
         await debugViewer?.stop()
         await server.stop()
     }
