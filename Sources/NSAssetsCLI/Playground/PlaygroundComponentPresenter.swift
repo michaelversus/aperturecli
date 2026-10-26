@@ -39,7 +39,12 @@ struct PlaygroundComponentPresenter: PlaygroundComponentPresenting {
                 report(PlaygroundComponentStatus(id: request.id, state: .ready))
             case let .failed(diagnostics, log):
                 output(log)
-                report(failure(for: request, message: "The component did not compile.", diagnostics: diagnostics))
+                // Only the code the app sent can "not compile"; a refused asset or a harness problem is not its fault.
+                let blamesComponent = diagnostics.contains { $0.file != .harness }
+                let message = blamesComponent
+                    ? "The component did not compile."
+                    : "The harness could not be built for this component."
+                report(failure(for: request, message: message, diagnostics: diagnostics))
             }
         } catch {
             report(failure(for: request, message: error.localizedDescription))
