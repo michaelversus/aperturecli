@@ -9,6 +9,11 @@ notification the app already observes, and rejects any connection with a wrong t
 page open in a browser can reach a localhost port. The announcement and first message carry the CLI version and a protocol
 number, so the app can tell "not running" from "update the CLI".
 
+The announcement is posted once at startup, but the app may open after the CLI. So the app can post
+`app.nsbuilder.nsassets.playground.discover`, and a running `serve` answers by re-posting the same announcement, with the
+same token for the lifetime of the process. This is additive, so the protocol number does not change. If nothing answers,
+the app shows "not running" (its concern).
+
 For the component itself, the app sends the code to show: self-contained source that imports system frameworks only, one
 entry expression, the kind of component (SwiftUI view, or UIKit view or view controller), and the snapshot name and theme. How
 the app extracts that code is its own concern. The CLI builds it into one cached harness project per repository, regenerating

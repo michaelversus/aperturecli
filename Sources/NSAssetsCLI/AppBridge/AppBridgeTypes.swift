@@ -42,3 +42,8 @@ protocol UserConfirmationPrompting {
 protocol DistributedNotificationPosting {
     func post(name: Notification.Name, userInfo: [AnyHashable: Any])
 }
+
+protocol DistributedNotificationObserving {
+    /// Calls `handler` for each notification named `name` until the returned closure is called.
+    func observe(name: Notification.Name, handler: @escaping @Sendable () -> Void) -> @Sendable () -> Void
+}

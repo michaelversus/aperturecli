@@ -25,3 +25,11 @@ struct DistributedNotificationPoster: DistributedNotificationPosting {
         )
     }
 }
+
+struct DistributedNotificationObserver: DistributedNotificationObserving, Sendable {
+    func observe(name: Notification.Name, handler: @escaping @Sendable () -> Void) -> @Sendable () -> Void {
+        let center = DistributedNotificationCenter.default()
+        nonisolated(unsafe) let token = center.addObserver(forName: name, object: nil, queue: nil) { _ in handler() }
+        return { center.removeObserver(token) }
+    }
+}

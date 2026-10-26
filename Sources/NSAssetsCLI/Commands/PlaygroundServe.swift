@@ -50,6 +50,7 @@ extension NSAssetsCLI.Playground {
                 simulatorUDID: udid,
                 workingDirectory: FileManager.default.currentDirectoryPath,
                 poster: DistributedNotificationPoster(),
+                observer: DistributedNotificationObserver(),
                 debugViewer: debugViewer ? PlaygroundDebugViewer() : nil,
                 onReady: { port in
                     Swift.print("Playground ready on 127.0.0.1:\(port). Press Ctrl-C to stop.")
