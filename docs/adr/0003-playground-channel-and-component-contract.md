@@ -19,6 +19,15 @@ entry expression, the kind of component (SwiftUI view, or UIKit view or view con
 the app extracts that code is its own concern. The CLI builds it into one cached harness project per repository, regenerating
 a single entry file per component so later builds are incremental, and answers a failed build with structured diagnostics.
 
+`showComponent` may also carry an optional `assets` field (absent means none): a list of asset catalog entries,
+`{"catalog":…,"kind":"imageset"|"colorset","path":"<.imageset or .colorset folder>"}`, so `Image("logo")` and
+`Color("brand")` resolve. The CLI copies them into a minimal `Assets.xcassets` in the harness directory, compiles it with
+`xcrun actool` for the simulator platform and the runtime's deployment target, and puts `Assets.car` in `Harness.app`.
+Resources are rebuilt only when the entries, their files or the deployment target change. A path is accepted only when it
+is an existing folder named `.imageset` or `.colorset` inside a `.xcassets` directory; anything else refuses the request
+with a `harness` diagnostic, as does an `actool` failure (with the full log in the terminal). Lookups are by name, so the
+first entry of a name and kind wins. Generated symbols, images in package bundles, fonts and strings are out of scope.
+
 To unload the component (the user left the Playground), the app sends `{"type":"clearComponent","id":"<unique>"}`. Requests
 run one after another with `showComponent`, and the reply goes to the requester only, as a `componentStatus` with state
 `cleared` or `failed` (there is no `building` state). `cleared` is an additive state, so older clients that ignore unknown

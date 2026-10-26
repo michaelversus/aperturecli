@@ -20,6 +20,22 @@ struct FileSystemTests {
     }
 
     @Test
+    func copiesADirectoryWithItsContents() throws {
+        let fileManager = FileManager.default
+        let directoryURL = try makeTemporaryDirectory()
+        defer { try? fileManager.removeItem(at: directoryURL) }
+        let fileSystem = FileSystem(fileManager: fileManager)
+        let source = directoryURL.appendingPathComponent("logo.imageset", isDirectory: true)
+        try fileManager.createDirectory(at: source, withIntermediateDirectories: true)
+        try fileSystem.writeFile("{}", toPath: source.appendingPathComponent("Contents.json").path)
+        let destination = directoryURL.appendingPathComponent("copy.imageset", isDirectory: true)
+
+        try fileSystem.copyItem(atPath: source.path, toPath: destination.path)
+
+        #expect(try fileSystem.readFile(atPath: destination.appendingPathComponent("Contents.json").path) == "{}")
+    }
+
+    @Test
     func removesExistingFileSystemItem() throws {
         let fileManager = FileManager.default
         let directoryURL = try makeTemporaryDirectory()

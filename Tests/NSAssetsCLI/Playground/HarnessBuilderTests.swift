@@ -116,6 +116,67 @@ struct HarnessBuilderTests {
     }
 
     @Test
+    func assetsAreCompiledIntoTheAppBeforeTheHarnessIsBuilt() throws {
+        let logo = "/repo/Assets.xcassets/logo.imageset"
+        let runner = MockCommandRunner(queuedResults: [.success(""), .success("")])
+        let builder = HarnessBuilder(
+            fileSystem: MockFileSystem(existingPaths: [logo]),
+            commandRunner: runner,
+            harnessDirectory: "/cache/h1"
+        )
+        var withAssets = request
+        withAssets.assets = [PlaygroundAssetEntry(catalog: "Assets", kind: .imageset, path: logo)]
+
+        let result = try builder.build(withAssets, target: target)
+
+        #expect(runner.invocations.map { $0.arguments.first } == ["actool", "swiftc"])
+        #expect(result == .built(appPath: "/cache/h1/Harness.app"))
+    }
+
+    @Test
+    func aRefusedAssetFailsTheBuildWithAHarnessDiagnosticAndNeverCompiles() throws {
+        let runner = MockCommandRunner()
+        let builder = HarnessBuilder(fileSystem: MockFileSystem(), commandRunner: runner, harnessDirectory: "/cache/h1")
+        var withAssets = request
+        withAssets.assets = [PlaygroundAssetEntry(catalog: "Assets", kind: .imageset, path: "/etc/passwd")]
+
+        let result = try builder.build(withAssets, target: target)
+
+        guard case let .failed(diagnostics, _) = result else {
+            Issue.record("expected a failed build, got \(result)")
+            return
+        }
+        #expect(diagnostics.first?.file == .harness)
+        #expect(runner.invocations.isEmpty)
+    }
+
+    @Test
+    func anActoolFailureIsADiagnosticWithTheLogNotACrash() throws {
+        let logo = "/repo/Assets.xcassets/logo.imageset"
+        let failure = SubprocessRunnerError.commandFailed(
+            executable: "/usr/bin/xcrun", arguments: [], exitCode: 1, output: "error: bad catalog"
+        )
+        let runner = MockCommandRunner(queuedResults: [.failure(failure)])
+        let builder = HarnessBuilder(
+            fileSystem: MockFileSystem(existingPaths: [logo]),
+            commandRunner: runner,
+            harnessDirectory: "/cache/h1"
+        )
+        var withAssets = request
+        withAssets.assets = [PlaygroundAssetEntry(catalog: "Assets", kind: .imageset, path: logo)]
+
+        let result = try builder.build(withAssets, target: target)
+
+        guard case let .failed(diagnostics, log) = result else {
+            Issue.record("expected a failed build, got \(result)")
+            return
+        }
+        #expect(diagnostics.first?.file == .harness)
+        #expect(log == "error: bad catalog")
+        #expect(runner.invocations.count == 1)
+    }
+
+    @Test
     func aCompileErrorBecomesDiagnosticsInTheSentCodeAndKeepsTheFullLog() throws {
         let log = """
         /cache/h1/Sources/ComponentSource.swift:2:30: error: cannot find 'Missing' in scope

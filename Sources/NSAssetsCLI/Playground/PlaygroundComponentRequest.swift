@@ -6,4 +6,6 @@ struct PlaygroundComponentRequest: Codable, Equatable, Sendable {
     let entry: String
     let snapshotName: String
     let theme: PlaygroundTheme
+    /// Catalog entries the component looks up by name; absent when it uses none.
+    var assets: [PlaygroundAssetEntry]?
 }
