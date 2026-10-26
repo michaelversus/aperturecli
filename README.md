@@ -183,6 +183,10 @@ A missing file means the CLI was never run for the project. Write failures are i
 
 `playground serve` announces `{port, token}` through the distributed notification `app.nsbuilder.nsassets.playground.ready` when it starts. NSAssets Studio can ask a running `serve` to announce again by posting `app.nsbuilder.nsassets.playground.discover`; the CLI re-posts the same announcement, with the same token for the lifetime of the process. If nothing answers, the app should show that the playground is not running.
 
+### Clearing the playground component
+
+NSAssets Studio unloads the running component by sending `{"type":"clearComponent","id":"<unique>"}` on the playground channel. The CLI terminates the harness app, which returns the simulator to the home screen, and replies to that client only with `{"type":"componentStatus","id":…,"state":"cleared"|"failed","message":…,"diagnostics":[…]}`. Clearing when nothing is loaded succeeds. A later `showComponent` starts the harness again.
+
 ### Setup workflow
 1. The wizard prompts for repository-specific Xcode and simulator details.
 2. It resolves the project file and optional local packages path.

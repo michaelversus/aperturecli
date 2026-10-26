@@ -38,6 +38,46 @@ struct SimctlHarnessControllerTests {
     }
 
     @Test
+    func clearTerminatesTheHarness() throws {
+        let runner = MockCommandRunner(queuedResults: [.success("")])
+        let controller = SimctlHarnessController(udid: "UDID-1", commandRunner: runner)
+
+        try controller.clear()
+
+        #expect(runner.invocations.map(\.arguments) == [
+            ["simctl", "terminate", "UDID-1", HarnessSourceGenerator.bundleIdentifier]
+        ])
+    }
+
+    @Test
+    func clearingWhenNothingIsLoadedSucceeds() throws {
+        let nothing = SubprocessRunnerError.commandFailed(
+            executable: ExternalTools.xcrun,
+            arguments: [],
+            exitCode: 3,
+            output: "Simulator device failed to terminate. found nothing to terminate"
+        )
+        let runner = MockCommandRunner(queuedResults: [.failure(nothing)])
+        let controller = SimctlHarnessController(udid: "UDID-1", commandRunner: runner)
+
+        try controller.clear()
+    }
+
+    @Test
+    func clearFailsForAnyOtherTerminateFailure() {
+        let broken = SubprocessRunnerError.commandFailed(
+            executable: ExternalTools.xcrun,
+            arguments: [],
+            exitCode: 164,
+            output: "Unable to lookup in current state: Shutdown"
+        )
+        let runner = MockCommandRunner(queuedResults: [.failure(broken)])
+        let controller = SimctlHarnessController(udid: "UDID-1", commandRunner: runner)
+
+        #expect(throws: SubprocessRunnerError.self) { try controller.clear() }
+    }
+
+    @Test
     func relaunchStillLaunchesWhenNothingWasRunning() throws {
         struct NotRunning: Error {}
         let runner = MockCommandRunner(queuedResults: [.failure(NotRunning()), .success("")])

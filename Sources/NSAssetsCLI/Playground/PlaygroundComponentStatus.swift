@@ -4,6 +4,7 @@ struct PlaygroundComponentStatus: Codable, Equatable, Sendable {
         case building
         case ready
         case failed
+        case cleared
     }
 
     let id: String

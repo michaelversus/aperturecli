@@ -29,6 +29,33 @@ struct PlaygroundComponentPresenterTests {
     }
 
     @Test
+    func clearingStopsTheHarnessAndReportsCleared() async {
+        let controller = MockHarnessSimulatorController()
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: MockHarnessBuilder(result: .success(.built(appPath: "/x"))), controller: controller)
+
+        await presenter.clear(id: "clear-1", report: statuses.record)
+
+        #expect(controller.calls == [.clear])
+        #expect(statuses.statuses == [PlaygroundComponentStatus(id: "clear-1", state: .cleared)])
+    }
+
+    @Test
+    func aFailureToClearIsAHarnessDiagnosticNotACrash() async {
+        struct StuckHarness: LocalizedError { var errorDescription: String? { "stuck" } }
+        let controller = MockHarnessSimulatorController(clearError: StuckHarness())
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: MockHarnessBuilder(result: .success(.built(appPath: "/x"))), controller: controller)
+
+        await presenter.clear(id: "clear-1", report: statuses.record)
+
+        let status = statuses.statuses.first
+        #expect(status?.state == .failed)
+        #expect(status?.id == "clear-1")
+        #expect(status?.diagnostics == [.harnessError("stuck")])
+    }
+
+    @Test
     func theFirstBuildInARepositoryIsMarkedAsTheSlowOne() async {
         let builder = MockHarnessBuilder(result: .success(.built(appPath: "/x")), isWarm: false)
         let statuses = StatusRecorder()

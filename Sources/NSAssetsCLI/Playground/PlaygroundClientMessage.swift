@@ -1,7 +1,7 @@
 import Foundation
 
 /// A text message from a connected client: a hello that names its protocol, a tap, a step of a gesture, a key press, a
-/// button press, or a request to show a component.
+/// button press, or a request to show or clear a component.
 struct PlaygroundClientMessage: Decodable, Equatable {
     enum Kind: String, Decodable {
         case hello
@@ -10,6 +10,7 @@ struct PlaygroundClientMessage: Decodable, Equatable {
         case key
         case button
         case showComponent
+        case clearComponent
     }
 
     let type: Kind

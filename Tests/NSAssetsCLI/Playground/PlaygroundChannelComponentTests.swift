@@ -38,6 +38,20 @@ struct PlaygroundChannelComponentTests: PlaygroundChannelTesting {
     }
 
     @Test
+    func aClearRequestIsAnsweredToTheRequesterWithClearedAndItsID() async throws {
+        let presenter = MockComponentPresenter()
+        let (server, port) = try await makeServer(componentPresenter: presenter)
+        let client = try await handshake(port: port)
+
+        try await client.send(.string(#"{"type":"clearComponent","id":"c-1"}"#))
+
+        let status = try await receiveStatus(from: client)
+        #expect(status == PlaygroundComponentStatus(id: "c-1", state: .cleared))
+        client.cancel(with: .goingAway, reason: nil)
+        await server.stop()
+    }
+
+    @Test
     func withoutAPresenterAComponentRequestIsAnsweredWithAFailure() async throws {
         let (server, port) = try await makeServer()
         let client = try await handshake(port: port)
