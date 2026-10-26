@@ -95,6 +95,30 @@ struct PlaygroundComponentPresenterTests {
     }
 
     @Test
+    func aFailureOnlyTheHarnessCanExplainDoesNotBlameTheComponentCode() async {
+        let diagnostic = PlaygroundDiagnostic.harnessError("Asset \"/etc/passwd\" was refused.")
+        let builder = MockHarnessBuilder(result: .success(.failed(diagnostics: [diagnostic], log: "")))
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: builder, controller: MockHarnessSimulatorController())
+
+        await presenter.present(request, report: statuses.record)
+
+        #expect(statuses.statuses.last?.message == "The harness could not be built for this component.")
+    }
+
+    @Test
+    func aCompilerErrorInTheSentCodeStillSaysTheComponentDidNotCompile() async {
+        let diagnostic = PlaygroundDiagnostic(file: .component, line: 4, column: 1, severity: .error, message: "boom")
+        let builder = MockHarnessBuilder(result: .success(.failed(diagnostics: [diagnostic], log: "log")))
+        let statuses = StatusRecorder()
+        let presenter = makePresenter(builder: builder, controller: MockHarnessSimulatorController())
+
+        await presenter.present(request, report: statuses.record)
+
+        #expect(statuses.statuses.last?.message == "The component did not compile.")
+    }
+
+    @Test
     func aFailedBuildReportsDiagnosticsAndPrintsTheFullLog() async {
         let diagnostic = PlaygroundDiagnostic(file: .component, line: 4, column: 1, severity: .error, message: "boom")
         let builder = MockHarnessBuilder(result: .success(.failed(diagnostics: [diagnostic], log: "FULL COMPILER LOG")))
