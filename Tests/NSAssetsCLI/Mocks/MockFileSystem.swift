@@ -11,6 +11,11 @@ final class MockFileSystem: FileSystemProvider {
         let path: String
     }
 
+    struct CopyOperation: Equatable {
+        let source: String
+        let destination: String
+    }
+
     struct CreateDirectoryOperation {
         let path: String
         let withIntermediateDirectories: Bool
@@ -30,6 +35,7 @@ final class MockFileSystem: FileSystemProvider {
     private(set) var readFileCalls: [String] = []
     private(set) var removeItemOperations: [RemoveItemOperation] = []
     private(set) var writeOperations: [WriteOperation] = []
+    private(set) var copyOperations: [CopyOperation] = []
     private(set) var createDirectoryOperations: [CreateDirectoryOperation] = []
 
     init(
@@ -127,6 +133,10 @@ final class MockFileSystem: FileSystemProvider {
 
     func writeFile(_ contents: String, toPath path: String) throws {
         writeOperations.append(WriteOperation(contents: contents, path: path))
+    }
+
+    func copyItem(atPath sourcePath: String, toPath destinationPath: String) throws {
+        copyOperations.append(CopyOperation(source: sourcePath, destination: destinationPath))
     }
 
     func removeItem(atPath path: String) throws {

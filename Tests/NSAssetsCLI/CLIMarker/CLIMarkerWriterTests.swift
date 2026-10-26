@@ -48,6 +48,7 @@ private final class FailingFileSystem: FileSystemProvider {
     func readFile(atPath path: String) throws -> String { "" }
     func readLines(atPath path: String) throws -> [String] { [] }
     func writeFile(_ contents: String, toPath path: String) throws { throw CocoaError(.fileWriteNoPermission) }
+    func copyItem(atPath sourcePath: String, toPath destinationPath: String) throws {}
     func removeItem(atPath path: String) throws {}
     func createDirectory(atPath path: String, withIntermediateDirectories: Bool) throws {
         throw CocoaError(.fileWriteNoPermission)

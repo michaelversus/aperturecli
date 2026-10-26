@@ -40,6 +40,21 @@ struct HarnessBuilder: HarnessBuilding, @unchecked Sendable {
         )
 
         do {
+            try HarnessAssetCompiler(
+                fileSystem: fileSystem,
+                commandRunner: commandRunner,
+                harnessDirectory: harnessDirectory
+            ).prepare(request.assets ?? [], target: target, appBundle: appBundle)
+        } catch let HarnessAssetError.refused(diagnostics) {
+            return .failed(diagnostics: diagnostics, log: diagnostics.map(\.message).joined(separator: "\n"))
+        } catch let HarnessAssetError.compilerFailed(output) {
+            return .failed(
+                diagnostics: [.harnessError("The asset catalog entries could not be compiled. See the terminal for the log.")],
+                log: output
+            )
+        }
+
+        do {
             _ = try commandRunner.run(
                 executable: ExternalTools.xcrun,
                 arguments: [

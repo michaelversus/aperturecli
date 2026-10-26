@@ -183,6 +183,19 @@ A missing file means the CLI was never run for the project. Write failures are i
 
 `playground serve` announces `{port, token}` through the distributed notification `app.nsbuilder.nsassets.playground.ready` when it starts. NSAssets Studio can ask a running `serve` to announce again by posting `app.nsbuilder.nsassets.playground.discover`; the CLI re-posts the same announcement, with the same token for the lifetime of the process. If nothing answers, the app should show that the playground is not running.
 
+### Asset catalog entries
+
+`showComponent` accepts an optional `assets` list so components that use `Image("logo")` or `Color("brand")` render correctly in the playground:
+
+```json
+"assets": [
+  { "catalog": "Assets", "kind": "imageset", "path": "/path/to/Assets.xcassets/logo.imageset" },
+  { "catalog": "Assets", "kind": "colorset", "path": "/path/to/Assets.xcassets/brand.colorset" }
+]
+```
+
+The CLI copies the entries into the harness, compiles them with `xcrun actool` and adds `Assets.car` to the harness app. Only existing `.imageset` / `.colorset` folders inside a `.xcassets` directory are accepted; anything else, or an `actool` failure, fails the request with a `harness` diagnostic. Generated symbols (`Image(.logo)`), package bundle resources, fonts and strings are not supported.
+
 ### Clearing the playground component
 
 NSAssets Studio unloads the running component by sending `{"type":"clearComponent","id":"<unique>"}` on the playground channel. The CLI terminates the harness app, which returns the simulator to the home screen, and replies to that client only with `{"type":"componentStatus","id":…,"state":"cleared"|"failed","message":…,"diagnostics":[…]}`. Clearing when nothing is loaded succeeds. A later `showComponent` starts the harness again.

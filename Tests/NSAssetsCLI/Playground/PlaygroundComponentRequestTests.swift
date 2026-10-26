@@ -21,6 +21,29 @@ struct PlaygroundComponentRequestTests {
         #expect(request.theme == .dark)
     }
 
+    @Test
+    func aMissingAssetsFieldDecodesAsNoAssets() throws {
+        let json = #"{"id":"1","kind":"swiftUIView","source":"","entry":"X()","snapshotName":"n","theme":"light"}"#
+
+        let request = try JSONDecoder().decode(PlaygroundComponentRequest.self, from: Data(json.utf8))
+
+        #expect(request.assets == nil)
+    }
+
+    @Test
+    func decodesAssetEntriesAndIgnoresUnknownFields() throws {
+        let json = """
+        {"id":"1","kind":"swiftUIView","source":"","entry":"X()","snapshotName":"n","theme":"light",
+         "assets":[{"catalog":"Assets","kind":"imageset","path":"/r/A.xcassets/logo.imageset","extra":1},
+                   {"catalog":"Assets","kind":"colorset","path":"/r/A.xcassets/brand.colorset"}]}
+        """
+
+        let request = try JSONDecoder().decode(PlaygroundComponentRequest.self, from: Data(json.utf8))
+
+        #expect(request.assets?.map(\.kind) == [.imageset, .colorset])
+        #expect(request.assets?.map(\.name) == ["logo", "brand"])
+    }
+
     @Test(arguments: ["swiftUIView", "uiKitView", "uiKitViewController"])
     func everyKindDecodes(kind: String) throws {
         let json = #"{"id":"1","kind":"\#(kind)","source":"","entry":"X()","snapshotName":"n","theme":"light"}"#

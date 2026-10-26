@@ -95,6 +95,10 @@ final class FileSystem: FileSystemProvider {
         try contents.write(toFile: path, atomically: true, encoding: .utf8)
     }
 
+    func copyItem(atPath sourcePath: String, toPath destinationPath: String) throws {
+        try fileManager.copyItem(atPath: sourcePath, toPath: destinationPath)
+    }
+
     func removeItem(atPath path: String) throws {
         try fileManager.removeItem(atPath: path)
     }
