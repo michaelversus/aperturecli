@@ -163,6 +163,20 @@ Example:
 - `nsassets-artifacts/xcresults/<Scheme>.json` stores the structured parsed summary for NSAssets Studio.
 - `nsassets-artifacts/xcresults/<Scheme>/attachments/...` stores exported attachments grouped by failed test identifier.
 
+### CLI marker
+
+`init`, `xcresult parse` and `playground serve` also write `nsassets-artifacts/cli.json`, so NSAssets Studio (which is sandboxed and cannot launch processes) can tell whether the CLI is set up for a project and which versions it speaks:
+
+```json
+{
+  "cliVersion" : "1.0.7",
+  "protocolVersion" : 1,
+  "updatedAt" : "2026-10-25T12:00:00Z"
+}
+```
+
+A missing file means the CLI was never run for the project. Write failures are ignored; the marker never fails a command.
+
 ## How it works
 
 ### Setup workflow

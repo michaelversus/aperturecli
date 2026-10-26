@@ -24,7 +24,8 @@ extension NSAssetsCLI {
                 prompter: TerminalSetupPrompter(output: output),
                 schemeDiscoverer: schemeDiscoverer,
                 schemePostActionSynchronizer: schemeSynchronizer,
-                configWriter: NSAssetsConfigWriter(fileSystem: fileSystem)
+                configWriter: NSAssetsConfigWriter(fileSystem: fileSystem),
+                markerWriter: CLIMarkerWriter(fileSystem: fileSystem)
             )
             try await compositionRoot.run()
         }

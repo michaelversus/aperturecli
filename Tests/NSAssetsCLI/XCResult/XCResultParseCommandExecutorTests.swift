@@ -4,6 +4,26 @@ import Testing
 
 struct XCResultParseCommandExecutorSuccessTests {
     @Test
+    func writesTheCLIMarkerAtTheRepoRoot() throws {
+        let fileSystem = MockFileSystem(
+            currentDirectoryPath: "/repo/App/Subdir",
+            existingPaths: ["/repo/.git"]
+        )
+        let markerWriter = MockCLIMarkerWriter()
+        let executor = XCResultParseCommandExecutor(
+            fileSystem: fileSystem,
+            resolver: MockXCResultPathResolver(result: .success("/tmp/result.xcresult")),
+            xcresultToolClient: makeSuccessfulClient(),
+            markerWriter: markerWriter,
+            output: { _ in }
+        )
+
+        try executor.run(schemeName: "Snapshots", projectName: "MyApp")
+
+        #expect(markerWriter.writtenRootPaths == ["/repo"])
+    }
+
+    @Test
     func writesStructuredArtifactWithFailedTestAttachments() throws {
         let fileSystem = MockFileSystem(
             currentDirectoryPath: "/repo/App/Subdir",

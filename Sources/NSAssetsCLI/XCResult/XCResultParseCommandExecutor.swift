@@ -10,6 +10,7 @@ struct XCResultParseCommandExecutor {
     let resolver: XCResultPathResolving
     let xcresultToolClient: XCResultToolProviding
     let appBridge: AppBridgeHandling
+    let markerWriter: CLIMarkerWriting
     let output: (String) -> Void
 
     init(
@@ -17,12 +18,14 @@ struct XCResultParseCommandExecutor {
         resolver: XCResultPathResolving,
         xcresultToolClient: XCResultToolProviding,
         appBridge: AppBridgeHandling = NoopAppBridge(),
+        markerWriter: CLIMarkerWriting = NoopCLIMarkerWriter(),
         output: @escaping (String) -> Void
     ) {
         self.fileSystem = fileSystem
         self.resolver = resolver
         self.xcresultToolClient = xcresultToolClient
         self.appBridge = appBridge
+        self.markerWriter = markerWriter
         self.output = output
     }
 
@@ -34,6 +37,8 @@ struct XCResultParseCommandExecutor {
             schemeName: schemeName,
             workspacePath: workspacePath
         )
+
+        markerWriter.write(atRootPath: resolveRepoRoot(workspacePath: workspacePath))
 
         let parseResult = try parseFailedTests(
             testFailures: summary.testFailures,

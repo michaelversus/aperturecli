@@ -19,13 +19,15 @@ struct InitialCompositionRootTests {
         let schemeDiscoverer = MockSnapshotSchemeDiscoverer(discoveredSchemes: ["FeatureSnapshots"])
         let schemeSynchronizer = MockSchemePostActionSynchronizer()
         let configWriter = MockConfigWriter(configExists: false)
+        let markerWriter = MockCLIMarkerWriter()
 
         let compositionRoot = InitialCompositionRoot(
             fileSystem: fileSystem,
             prompter: prompter,
             schemeDiscoverer: schemeDiscoverer,
             schemePostActionSynchronizer: schemeSynchronizer,
-            configWriter: configWriter
+            configWriter: configWriter,
+            markerWriter: markerWriter
         )
 
         try await compositionRoot.run()
@@ -38,5 +40,6 @@ struct InitialCompositionRootTests {
         #expect(configWriter.writeCallCount == 1)
         #expect(configWriter.writtenRootPath == "/repo")
         #expect(configWriter.writtenConfig?.snapshotTestSchemes == ["FeatureSnapshots"])
+        #expect(markerWriter.writtenRootPaths == ["/repo"])
     }
 }

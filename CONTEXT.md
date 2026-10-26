@@ -25,6 +25,11 @@ _Avoid_: socket, stream, link
 The notification through which the CLI tells NSAssets Studio where and how to connect to the playground channel.
 _Avoid_: broadcast, handshake (the handshake is the first exchange on the channel)
 
+**CLI marker**:
+The `nsassets-artifacts/cli.json` file every project-touching command writes, so NSAssets Studio can read the CLI and
+protocol versions without launching a process.
+_Avoid_: version file, manifest
+
 **Simulator session**:
 One live connection to one explicitly chosen simulator, through which frames arrive and input is sent.
 _Avoid_: stream, connection
