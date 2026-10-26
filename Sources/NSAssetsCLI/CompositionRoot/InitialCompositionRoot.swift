@@ -6,6 +6,7 @@ struct InitialCompositionRoot {
     let schemeDiscoverer: SnapshotSchemeDiscovering
     let schemePostActionSynchronizer: SchemePostActionSynchronizing
     let configWriter: NSAssetsConfigWriting
+    var markerWriter: CLIMarkerWriting = NoopCLIMarkerWriter()
 
     func run() async throws {
         let wizard = InitialSetupWizard(
@@ -17,5 +18,6 @@ struct InitialCompositionRoot {
         )
 
         try await wizard.run()
+        markerWriter.write(atRootPath: fileSystem.currentDirectoryPath())
     }
 }

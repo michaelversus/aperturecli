@@ -51,6 +51,7 @@ extension NSAssetsCLI.XCResult {
                 resolver: resolver,
                 xcresultToolClient: xcresultToolClient,
                 appBridge: appBridge,
+                markerWriter: CLIMarkerWriter(fileSystem: fileSystem),
                 output: { line in Swift.print(line) }
             )
 

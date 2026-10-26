@@ -29,6 +29,7 @@ extension NSAssetsCLI.Playground {
                 commandRunner: SubprocessRunner(),
                 workingDirectory: FileManager.default.currentDirectoryPath
             ).resolve()
+            CLIMarkerWriter(fileSystem: FileSystem()).write(atRootPath: FileManager.default.currentDirectoryPath)
             let token = try PlaygroundTokenGenerator.make()
             let session = LiveSimulatorSession(udid: udid)
             let verifier = verifyTaps
