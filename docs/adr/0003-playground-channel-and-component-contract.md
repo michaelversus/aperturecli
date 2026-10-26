@@ -19,6 +19,13 @@ entry expression, the kind of component (SwiftUI view, or UIKit view or view con
 the app extracts that code is its own concern. The CLI builds it into one cached harness project per repository, regenerating
 a single entry file per component so later builds are incremental, and answers a failed build with structured diagnostics.
 
+To unload the component (the user left the Playground), the app sends `{"type":"clearComponent","id":"<unique>"}`. Requests
+run one after another with `showComponent`, and the reply goes to the requester only, as a `componentStatus` with state
+`cleared` or `failed` (there is no `building` state). `cleared` is an additive state, so older clients that ignore unknown
+states keep working. Clearing terminates the harness, which returns the simulator to the home screen: the neutral state,
+needing no harness to stay alive. A later `showComponent` starts the harness again as for the first request. Clearing when
+nothing is loaded succeeds as a no-op; any other failure to terminate is a `harness` diagnostic.
+
 A refused connection is accepted at the WebSocket level and closed at once without a frame, because the framework answers a
 true rejection without closing the socket and clients would hang. Only the hidden debug viewer's own origin is allowed as a
 browser origin.

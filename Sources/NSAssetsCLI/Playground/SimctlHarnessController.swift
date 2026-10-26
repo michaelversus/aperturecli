@@ -20,6 +20,14 @@ struct SimctlHarnessController: HarnessSimulatorControlling, @unchecked Sendable
         try simctl(["launch", udid, HarnessSourceGenerator.bundleIdentifier])
     }
 
+    func clear() throws {
+        do {
+            try simctl(["terminate", udid, HarnessSourceGenerator.bundleIdentifier])
+        } catch SubprocessRunnerError.commandFailed(_, _, _, let output) where output.contains("found nothing to terminate") {
+            // Nothing was loaded, so there is nothing to clear.
+        }
+    }
+
     private func simctl(_ arguments: [String]) throws {
         _ = try commandRunner.run(executable: ExternalTools.xcrun, arguments: ["simctl"] + arguments)
     }

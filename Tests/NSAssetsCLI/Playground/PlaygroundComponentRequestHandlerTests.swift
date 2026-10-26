@@ -45,6 +45,42 @@ struct PlaygroundComponentRequestHandlerTests {
     }
 
     @Test
+    func aClearRequestIsClearedAndRepliedToWithItsID() async {
+        let presenter = MockComponentPresenter()
+        let replies = StatusRecorder()
+        let handler = PlaygroundComponentRequestHandler(presenter: presenter)
+
+        handler.handleClear(Data(#"{"type":"clearComponent","id":"c-1","extra":1}"#.utf8), reply: replies.record)
+
+        #expect(await waitUntil { replies.statuses.count == 1 })
+        #expect(replies.statuses == [PlaygroundComponentStatus(id: "c-1", state: .cleared)])
+        #expect(presenter.clears == ["c-1"])
+    }
+
+    @Test
+    func aClearRequestWithoutAnIDIsRepliedToWithAFailure() {
+        let presenter = MockComponentPresenter()
+        let replies = StatusRecorder()
+        let handler = PlaygroundComponentRequestHandler(presenter: presenter)
+
+        handler.handleClear(Data(#"{"type":"clearComponent"}"#.utf8), reply: replies.record)
+
+        #expect(replies.statuses.first?.state == .failed)
+        #expect(presenter.clears.isEmpty)
+    }
+
+    @Test
+    func withoutAPresenterAClearRequestIsRepliedToWithAFailure() {
+        let handler = PlaygroundComponentRequestHandler(presenter: nil)
+        let replies = StatusRecorder()
+
+        handler.handleClear(Data(#"{"type":"clearComponent","id":"c-1"}"#.utf8), reply: replies.record)
+
+        #expect(replies.statuses.first?.state == .failed)
+        #expect(replies.statuses.first?.id == "c-1")
+    }
+
+    @Test
     func withoutAPresenterTheRequestIsRepliedToWithAFailure() {
         let handler = PlaygroundComponentRequestHandler(presenter: nil)
         let replies = StatusRecorder()

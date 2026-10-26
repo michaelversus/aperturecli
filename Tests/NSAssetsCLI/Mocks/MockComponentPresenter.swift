@@ -15,6 +15,14 @@ final class MockComponentPresenter: PlaygroundComponentPresenting, @unchecked Se
         self.duration = duration
     }
 
+    private var cleared: [String] = []
+    var clears: [String] { lock.withLock { cleared } }
+
+    func clear(id: String, report: @Sendable (PlaygroundComponentStatus) -> Void) async {
+        lock.withLock { cleared.append(id) }
+        report(PlaygroundComponentStatus(id: id, state: .cleared))
+    }
+
     var requests: [PlaygroundComponentRequest] { lock.withLock { presented } }
     var didOverlap: Bool { lock.withLock { overlapped } }
 

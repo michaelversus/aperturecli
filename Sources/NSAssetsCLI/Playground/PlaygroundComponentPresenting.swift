@@ -4,4 +4,10 @@ protocol PlaygroundComponentPresenting: Sendable {
         _ request: PlaygroundComponentRequest,
         report: @Sendable (PlaygroundComponentStatus) -> Void
     ) async
+
+    /// Unloads the component, reporting `cleared` or `failed`.
+    func clear(
+        id: String,
+        report: @Sendable (PlaygroundComponentStatus) -> Void
+    ) async
 }

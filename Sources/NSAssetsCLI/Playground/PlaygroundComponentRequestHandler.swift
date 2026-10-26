@@ -29,6 +29,31 @@ final class PlaygroundComponentRequestHandler: Sendable {
         }
     }
 
+    /// Answers a `clearComponent` message, in line with the presentations so a clear never cuts a build short.
+    func handleClear(_ text: Data, reply: @escaping @Sendable (PlaygroundComponentStatus) -> Void) {
+        guard let id = (try? JSONDecoder().decode(Identity.self, from: text))?.id else {
+            reply(
+                PlaygroundComponentStatus(
+                    id: "",
+                    state: .failed,
+                    message: "The clear request was malformed: it has no id."
+                )
+            )
+            return
+        }
+        guard let presenter else {
+            reply(
+                PlaygroundComponentStatus(
+                    id: id,
+                    state: .failed,
+                    message: "Components are not available in this session."
+                )
+            )
+            return
+        }
+        queue.enqueue { await presenter.clear(id: id, report: reply) }
+    }
+
     func present(
         _ request: PlaygroundComponentRequest,
         reply: @escaping @Sendable (PlaygroundComponentStatus) -> Void

@@ -180,11 +180,22 @@ final class PlaygroundChannelServer: @unchecked Sendable {
             handleComponentRequest(text, from: client)
             return
         }
+        if message.type == .clearComponent {
+            handleClearRequest(text, from: client)
+            return
+        }
         input.route(message, from: ObjectIdentifier(client))
     }
 
     private func handleComponentRequest(_ text: Data, from client: Client) {
         componentHandler.handle(text) { [weak self] status in
+            guard let self else { return }
+            queue.async { self.sendJSON(status, to: client) }
+        }
+    }
+
+    private func handleClearRequest(_ text: Data, from client: Client) {
+        componentHandler.handleClear(text) { [weak self] status in
             guard let self else { return }
             queue.async { self.sendJSON(status, to: client) }
         }

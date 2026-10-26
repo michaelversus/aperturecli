@@ -46,6 +46,25 @@ struct PlaygroundComponentPresenter: PlaygroundComponentPresenting {
         }
     }
 
+    func clear(
+        id: String,
+        report: @Sendable (PlaygroundComponentStatus) -> Void
+    ) async {
+        do {
+            try controller.clear()
+            report(PlaygroundComponentStatus(id: id, state: .cleared))
+        } catch {
+            report(
+                PlaygroundComponentStatus(
+                    id: id,
+                    state: .failed,
+                    message: "The component could not be cleared.",
+                    diagnostics: [.harnessError(error.localizedDescription)]
+                )
+            )
+        }
+    }
+
     private func failure(
         for request: PlaygroundComponentRequest,
         message: String,

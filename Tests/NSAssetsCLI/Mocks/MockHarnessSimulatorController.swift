@@ -6,14 +6,17 @@ final class MockHarnessSimulatorController: HarnessSimulatorControlling, @unchec
         case setAppearance(PlaygroundTheme)
         case install(String)
         case relaunch
+        case clear
     }
 
     private let lock = NSLock()
     private var recorded: [Call] = []
     private let installError: (any Error)?
+    private let clearError: (any Error)?
 
-    init(installError: (any Error)? = nil) {
+    init(installError: (any Error)? = nil, clearError: (any Error)? = nil) {
         self.installError = installError
+        self.clearError = clearError
     }
 
     var calls: [Call] { lock.withLock { recorded } }
@@ -29,5 +32,10 @@ final class MockHarnessSimulatorController: HarnessSimulatorControlling, @unchec
 
     func relaunch() throws {
         lock.withLock { recorded.append(.relaunch) }
+    }
+
+    func clear() throws {
+        lock.withLock { recorded.append(.clear) }
+        if let clearError { throw clearError }
     }
 }
